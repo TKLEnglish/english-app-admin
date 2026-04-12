@@ -1,7 +1,7 @@
-'use client'
-import { useState } from 'react'
-import { Dropdown, DropdownItem } from '@/components/dropdown/Dropdown'
-import { Button } from '@/components/button/Button'
+'use client';
+import { useState } from 'react';
+import { Dropdown, DropdownItem } from '@/components/dropdown/Dropdown';
+import { Button } from '@/components/button/Button';
 
 const FILE_ITEMS = [
   { label: 'New File', value: 'new', icon: '📄' },
@@ -11,7 +11,7 @@ const FILE_ITEMS = [
   { label: 'Save As…', value: 'save-as', icon: '💾' },
   { separator: true },
   { label: 'Delete', value: 'delete', icon: '🗑️', danger: true },
-]
+];
 
 const GROUPS = [
   {
@@ -25,7 +25,8 @@ const GROUPS = [
     label: 'Export',
     items: [
       {
-        label: 'Export As', icon: '📤',
+        label: 'Export As',
+        icon: '📤',
         children: [
           { label: 'PNG', value: 'png', icon: '🖼️' },
           { label: 'PDF', value: 'pdf', icon: '📑' },
@@ -41,16 +42,18 @@ const GROUPS = [
       { label: 'Delete', value: 'delete', icon: '🗑️', danger: true },
     ],
   },
-]
+];
 
 export default function DropdownPage() {
-  const [lastSelected, setLastSelected] = useState<DropdownItem | null>(null)
+  const [lastSelected, setLastSelected] = useState<DropdownItem | null>(null);
 
   return (
     <div className="page">
       <header className="page-header">
         <h1 className="page-title">Dropdown</h1>
-        <p className="page-description">Context menu with groups, submenus, keyboard navigation and danger variant.</p>
+        <p className="page-description">
+          Context menu with groups, submenus, keyboard navigation and danger variant.
+        </p>
       </header>
 
       <section className="demo-section">
@@ -59,7 +62,11 @@ export default function DropdownPage() {
           <Dropdown items={FILE_ITEMS} onSelected={setLastSelected}>
             <Button variant="primary">File ▾</Button>
           </Dropdown>
-          {lastSelected && <p className="demo-value" style={{ marginTop: '1rem' }}>Selected: {lastSelected.label}</p>}
+          {lastSelected && (
+            <p className="demo-value" style={{ marginTop: '1rem' }}>
+              Selected: {lastSelected.label}
+            </p>
+          )}
         </div>
       </section>
 
@@ -81,5 +88,5 @@ export default function DropdownPage() {
         </div>
       </section>
     </div>
-  )
+  );
 }

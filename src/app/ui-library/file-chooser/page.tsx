@@ -1,24 +1,26 @@
-'use client'
-import { useState } from 'react'
-import { FileChooserField } from '@/components/file-chooser-field/FileChooserField'
+'use client';
+import { useState } from 'react';
+import { FileChooserField } from '@/components/file-chooser-field/FileChooserField';
 
 export default function FileChooserPage() {
-  const [basic, setBasic] = useState<File | null>(null)
-  const [sm, setSm] = useState<File | null>(null)
-  const [md, setMd] = useState<File | null>(null)
-  const [lg, setLg] = useState<File | null>(null)
-  const [withHint, setWithHint] = useState<File | null>(null)
-  const [withError, setWithError] = useState<File | null>(null)
-  const [required, setRequired] = useState<File | null>(null)
-  const [audio, setAudio] = useState<File | null>(null)
-  const [image, setImage] = useState<File | null>(null)
-  const [disabled, setDisabled] = useState<File | null>(null)
+  const [basic, setBasic] = useState<File | null>(null);
+  const [sm, setSm] = useState<File | null>(null);
+  const [md, setMd] = useState<File | null>(null);
+  const [lg, setLg] = useState<File | null>(null);
+  const [withHint, setWithHint] = useState<File | null>(null);
+  const [withError, setWithError] = useState<File | null>(null);
+  const [required, setRequired] = useState<File | null>(null);
+  const [audio, setAudio] = useState<File | null>(null);
+  const [image, setImage] = useState<File | null>(null);
+  const [disabled, setDisabled] = useState<File | null>(null);
 
   return (
     <div className="page">
       <header className="page-header">
         <h1 className="page-title">File Chooser</h1>
-        <p className="page-description">Glassmorphism file input with label, hint, validation, sizes, and accept filtering.</p>
+        <p className="page-description">
+          Glassmorphism file input with label, hint, validation, sizes, and accept filtering.
+        </p>
       </header>
 
       <section className="demo-section">
@@ -87,5 +89,5 @@ export default function FileChooserPage() {
         </div>
       </section>
     </div>
-  )
+  );
 }

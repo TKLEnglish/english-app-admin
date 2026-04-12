@@ -1,22 +1,28 @@
-'use client'
-import { useState } from 'react'
-import { CalendarSelector } from '@/components/calendar-selector/CalendarSelector'
+'use client';
+import { useState } from 'react';
+import { CalendarSelector } from '@/components/calendar-selector/CalendarSelector';
 
 export default function CalendarPage() {
-  const [date1, setDate1] = useState<Date | undefined>()
-  const [date2, setDate2] = useState<Date | undefined>()
+  const [date1, setDate1] = useState<Date | undefined>();
+  const [date2, setDate2] = useState<Date | undefined>();
 
   return (
     <div className="page">
       <header className="page-header">
         <h1 className="page-title">Calendar</h1>
-        <p className="page-description">Date picker with month navigation, typed entry, and keyboard support.</p>
+        <p className="page-description">
+          Date picker with month navigation, typed entry, and keyboard support.
+        </p>
       </header>
 
       <section className="demo-section">
         <h2 className="demo-section-title">Basic</h2>
         <div className="demo-card">
-          <CalendarSelector label="Appointment Date" onChange={setDate1} hint="Choose a future date" />
+          <CalendarSelector
+            label="Appointment Date"
+            onChange={setDate1}
+            hint="Choose a future date"
+          />
           {date1 && <p className="demo-value">Selected: {date1.toDateString()}</p>}
         </div>
       </section>
@@ -41,5 +47,5 @@ export default function CalendarPage() {
         </div>
       </section>
     </div>
-  )
+  );
 }

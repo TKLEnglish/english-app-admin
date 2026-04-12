@@ -176,7 +176,9 @@ button {
 }
 
 /* Input Responsive */
-input, textarea, select {
+input,
+textarea,
+select {
   padding: 0.75rem;
   font-size: 1rem;
   border-radius: 4px;
@@ -184,7 +186,9 @@ input, textarea, select {
 }
 
 @media screen and (min-width: 650px) {
-  input, textarea, select {
+  input,
+  textarea,
+  select {
     padding: 0.875rem;
     font-size: 1rem;
   }
