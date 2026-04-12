@@ -1,5 +1,5 @@
 'use client'
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react'
 
 interface AuthToken {
   access: string
@@ -12,21 +12,27 @@ interface AuthContextType {
   error: string | null
   login: (username: string, password: string) => Promise<void>
   logout: () => void
+  refreshToken: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<AuthToken | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Load token from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem('auth_token')
     if (saved) {
       try {
-        setToken(JSON.parse(saved))
+        const parsed = JSON.parse(saved)
+        setToken(parsed)
+        scheduleRefresh(parsed)
       } catch {
         localStorage.removeItem('auth_token')
       }
@@ -34,11 +40,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false)
   }, [])
 
+  function scheduleRefresh(tok: AuthToken) {
+    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current)
+    
+    try {
+      // Decode JWT to get expiration time
+      const parts = tok.access.split('.')
+      if (parts.length !== 3) return
+      
+      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString())
+      const expiresAt = payload.exp ? payload.exp * 1000 : null
+      
+      if (!expiresAt) return
+      
+      // Schedule refresh 5 minutes before expiry
+      const now = Date.now()
+      const refreshAt = expiresAt - 5 * 60 * 1000
+      const timeUntilRefresh = Math.max(0, refreshAt - now)
+      
+      if (timeUntilRefresh > 0) {
+        refreshTimeoutRef.current = setTimeout(() => {
+          refreshAccessToken(tok.refresh)
+        }, timeUntilRefresh)
+      }
+    } catch {
+      // Silently fail — token decode errors don't prevent auth
+    }
+  }
+
+  async function refreshAccessToken(refreshTokenValue: string) {
+    try {
+      const res = await fetch(`${API_BASE}/private/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${refreshTokenValue}`,
+        },
+        body: JSON.stringify({}),
+      })
+      
+      if (!res.ok) {
+        if (res.status === 401) {
+          logout()
+          return
+        }
+        throw new Error('Token refresh failed')
+      }
+
+      const data = await res.json()
+      const newTokens: AuthToken = {
+        access: data.data?.accessToken || data.accessToken,
+        refresh: data.data?.refreshToken || refreshTokenValue,
+      }
+      setToken(newTokens)
+      localStorage.setItem('auth_token', JSON.stringify(newTokens))
+      scheduleRefresh(newTokens)
+    } catch (e) {
+      console.error('Token refresh error:', e)
+      logout()
+    }
+  }
+
   async function login(email: string, password: string) {
     setIsLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/common/auth/login-admin`, {
+      const res = await fetch(`${API_BASE}/common/auth/login-admin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -54,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setToken(tokens)
       localStorage.setItem('auth_token', JSON.stringify(tokens))
+      scheduleRefresh(tokens)
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Login failed'
       setError(msg)
@@ -63,13 +131,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function refreshToken() {
+    if (!token) throw new Error('No token available')
+    await refreshAccessToken(token.refresh)
+  }
+
   function logout() {
+    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current)
     setToken(null)
     localStorage.removeItem('auth_token')
   }
 
   return (
-    <AuthContext.Provider value={{ token, isLoading, error, login, logout }}>
+    <AuthContext.Provider value={{ token, isLoading, error, login, logout, refreshToken }}>
       {children}
     </AuthContext.Provider>
   )
