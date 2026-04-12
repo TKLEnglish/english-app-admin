@@ -202,22 +202,20 @@ export default function UsersPage() {
           </div>
         </div>
 
-        <div className="demo-card">
-          <DataTable
-            columns={COLUMNS}
-            data={tableData}
-            loading={loading}
-            emptyMessage="No users found."
-            onSortChange={(s) => {
-              setSort(s);
-              setPage(1);
-            }}
-            page={page}
-            totalPages={totalPages}
-            totalItems={total}
-            onPageChange={setPage}
-          />
-        </div>
+        <DataTable
+          columns={COLUMNS}
+          data={tableData}
+          loading={loading}
+          emptyMessage="No users found."
+          onSortChange={(s) => {
+            setSort(s);
+            setPage(1);
+          }}
+          page={page}
+          totalPages={totalPages}
+          totalItems={total}
+          onPageChange={setPage}
+        />
       </section>
 
       {/* Edit Dialog */}
