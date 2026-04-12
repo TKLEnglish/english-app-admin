@@ -1,0 +1,264 @@
+/* Blur Effects and Backdrop Patterns */
+/* Strategic blur for visual hierarchy and focus */
+
+/* Main Content Blur - Applied when modals/overlays open */
+.blur-content {
+  filter: blur(4px);
+  pointer-events: none;
+}
+
+.blur-content-light {
+  filter: blur(2px);
+  pointer-events: none;
+}
+
+.blur-content-heavy {
+  filter: blur(8px);
+  pointer-events: none;
+}
+
+/* Smooth blur transition */
+.blur-transition {
+  transition: filter 0.3s ease;
+}
+
+/* Modal Backdrop - Semi-transparent with blur */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px) saturate(120%);
+  -webkit-backdrop-filter: blur(6px) saturate(120%);
+  z-index: 999;
+  animation: fadeIn 0.25s ease;
+}
+
+/* Lighter backdrop */
+.modal-backdrop-light {
+  background-color: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(4px) saturate(110%);
+  -webkit-backdrop-filter: blur(4px) saturate(110%);
+}
+
+/* Darker backdrop */
+.modal-backdrop-dark {
+  background-color: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px) saturate(130%);
+  -webkit-backdrop-filter: blur(8px) saturate(130%);
+}
+
+/* Modal Popup - Centered overlay with glass morphism */
+.modal-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(20px) saturate(200%);
+  -webkit-backdrop-filter: blur(20px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.2),
+    0 8px 24px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  z-index: 1000;
+  max-width: 450px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: glassSlideUp 0.25s ease;
+}
+
+@keyframes glassSlideUp {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+/* Modal variations */
+.modal-popup-small {
+  max-width: 300px;
+}
+
+.modal-popup-medium {
+  max-width: 600px;
+}
+
+.modal-popup-large {
+  max-width: 800px;
+}
+
+/* Modal Close Button */
+.modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #6b7280;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #1f2937;
+}
+
+.modal-close:active {
+  transform: scale(0.9);
+}
+
+/* Modal Title */
+.modal-title {
+  margin: 0 0 1rem 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+  text-align: center;
+}
+
+/* Overlay - Full screen with blur */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px) saturate(120%);
+  -webkit-backdrop-filter: blur(6px) saturate(120%);
+  z-index: 500;
+}
+
+/* Drawer/Sidebar Overlay */
+.drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px) saturate(110%);
+  -webkit-backdrop-filter: blur(4px) saturate(110%);
+  z-index: 40;
+}
+
+/* Blur filter utilities */
+.blur-none {
+  filter: blur(0);
+}
+
+.blur-sm {
+  filter: blur(2px);
+}
+
+.blur-base {
+  filter: blur(4px);
+}
+
+.blur-md {
+  filter: blur(6px);
+}
+
+.blur-lg {
+  filter: blur(8px);
+}
+
+.blur-xl {
+  filter: blur(12px);
+}
+
+/* Apply blur with disabled pointer events */
+.blur-interactive {
+  filter: blur(4px);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Smooth blur transitions */
+.blur-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.blur-fast {
+  transition: all 0.15s ease;
+}
+
+.blur-slow {
+  transition: all 0.5s ease;
+}
+
+/* Animation: Fade in backdrop */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Animation: Slide up modal */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -45%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Animation: Slide in from right (for drawer) */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(400px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Animation: Scale in */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Combined blur and animation */
+.blur-fade-in {
+  animation: fadeIn 0.3s ease;
+}
+
+.blur-slide-up {
+  animation: slideUp 0.3s ease;
+}
+
+.blur-slide-in-right {
+  animation: slideInRight 0.4s ease;
+}
+
+.blur-scale-in {
+  animation: scaleIn 0.3s ease;
+}

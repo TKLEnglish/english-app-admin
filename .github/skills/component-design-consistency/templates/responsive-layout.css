@@ -1,0 +1,320 @@
+/* Responsive Layout Patterns */
+/* Mobile-first approach with consistent breakpoints */
+
+/* Breakpoints */
+/* Mobile: < 480px */
+/* Tablet: 480px - 650px */
+/* Desktop: > 650px */
+
+/* Base mobile styles - Stack everything vertically */
+.responsive-container {
+  width: 100%;
+  padding: 1rem;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.responsive-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.responsive-flex {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Tablet (480px+) */
+@media screen and (min-width: 480px) {
+  .responsive-container {
+    padding: 1.5rem;
+    max-width: 90%;
+  }
+
+  .responsive-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+
+  .responsive-flex {
+    flex-direction: row;
+    gap: 1.5rem;
+  }
+
+  .responsive-form {
+    max-width: 500px;
+  }
+}
+
+/* Desktop (650px+) */
+@media screen and (min-width: 650px) {
+  .responsive-container {
+    padding: 2rem;
+    max-width: 800px;
+  }
+
+  .responsive-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+
+  .responsive-flex {
+    flex-direction: row;
+    gap: 2rem;
+  }
+
+  .responsive-form {
+    max-width: 600px;
+  }
+}
+
+/* Card Responsive */
+.card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+@media screen and (min-width: 480px) {
+  .card {
+    padding: 1.5rem;
+  }
+}
+
+@media screen and (min-width: 650px) {
+  .card {
+    padding: 2rem;
+  }
+}
+
+/* Modal Responsive */
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 95%;
+  max-height: 90vh;
+  border-radius: 8px;
+  padding: 1.5rem;
+  z-index: 1000;
+}
+
+@media screen and (min-width: 480px) {
+  .modal {
+    width: 90%;
+    max-width: 450px;
+    padding: 2rem;
+    border-radius: 12px;
+  }
+}
+
+@media screen and (min-width: 650px) {
+  .modal {
+    width: 100%;
+    max-width: 600px;
+  }
+}
+
+/* Form Responsive */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media screen and (min-width: 480px) {
+  .form-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .form {
+    gap: 1.5rem;
+  }
+}
+
+@media screen and (min-width: 650px) {
+  .form-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .form {
+    gap: 2rem;
+    max-width: 600px;
+  }
+}
+
+/* Button Responsive */
+button {
+  padding: 0.75rem 1rem;
+  min-height: 36px;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+@media screen and (min-width: 650px) {
+  button {
+    padding: 0.875rem 1.25rem;
+    min-height: 40px;
+  }
+}
+
+/* Input Responsive */
+input, textarea, select {
+  padding: 0.75rem;
+  font-size: 1rem;
+  border-radius: 4px;
+  width: 100%;
+}
+
+@media screen and (min-width: 650px) {
+  input, textarea, select {
+    padding: 0.875rem;
+    font-size: 1rem;
+  }
+}
+
+/* Header Responsive */
+header {
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@media screen and (min-width: 480px) {
+  header {
+    padding: 1.5rem 2rem;
+  }
+}
+
+@media screen and (min-width: 650px) {
+  header {
+    padding: 2rem;
+  }
+}
+
+/* Main Content Area Responsive */
+main {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+@media screen and (min-width: 480px) {
+  main {
+    padding: 1.5rem;
+  }
+}
+
+@media screen and (min-width: 650px) {
+  main {
+    padding: 2rem;
+  }
+}
+
+/* Sidebar Layout Responsive */
+.layout-sidebar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+@media screen and (min-width: 650px) {
+  .layout-sidebar {
+    grid-template-columns: 250px 1fr;
+    gap: 2rem;
+  }
+}
+
+.sidebar {
+  background: #f9fafb;
+  padding: 1rem;
+  border-radius: 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+@media screen and (min-width: 650px) {
+  .sidebar {
+    padding: 2rem;
+    border-radius: 8px;
+    border-bottom: none;
+    border-right: 1px solid #e5e7eb;
+  }
+}
+
+/* Typography Responsive */
+h1 {
+  font-size: 1.75rem;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+}
+
+h2 {
+  font-size: 1.25rem;
+  line-height: 1.25;
+  margin-bottom: 0.75rem;
+}
+
+h3 {
+  font-size: 1rem;
+  line-height: 1.4;
+  margin-bottom: 0.5rem;
+}
+
+@media screen and (min-width: 480px) {
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  h3 {
+    font-size: 1.125rem;
+  }
+}
+
+@media screen and (min-width: 650px) {
+  h1 {
+    font-size: 2.5rem;
+  }
+
+  h2 {
+    font-size: 1.875rem;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+  }
+}
+
+body {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+@media screen and (min-width: 650px) {
+  body {
+    font-size: 1rem;
+  }
+}
