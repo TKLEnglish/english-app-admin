@@ -324,22 +324,20 @@ export default function VocabularyPage() {
           </Button>
         </div>
 
-        <div className="demo-card">
-          <DataTable
-            columns={COLUMNS}
-            data={tableData}
-            loading={loading}
-            emptyMessage="No vocabulary found."
-            onSortChange={(s) => {
-              setSort(s);
-              setPage(1);
-            }}
-            page={page}
-            totalPages={totalPages}
-            totalItems={total}
-            onPageChange={setPage}
-          />
-        </div>
+        <DataTable
+          columns={COLUMNS}
+          data={tableData}
+          loading={loading}
+          emptyMessage="No vocabulary found."
+          onSortChange={(s) => {
+            setSort(s);
+            setPage(1);
+          }}
+          page={page}
+          totalPages={totalPages}
+          totalItems={total}
+          onPageChange={setPage}
+        />
       </section>
 
       {/* Create / Edit Dialog */}

@@ -2553,12 +2553,20 @@ body {
 .data-table-scroll {
   width: 100%;
   overflow-x: auto;
+}
+.data-table-container {
+  width: 100%;
   border: 1px solid var(--border-solid);
   border-radius: var(--radius-xl);
   background: var(--panel-bg);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   backdrop-filter: blur(16px) saturate(180%);
   box-shadow: var(--glass-shadow), var(--glass-highlight);
+  overflow: hidden;
+}
+.data-table-filter + .data-table-container {
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  border-top: none;
 }
 .data-table-filter + .data-table-scroll {
   border-radius: 0 0 var(--radius-xl) var(--radius-xl);
