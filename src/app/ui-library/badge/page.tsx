@@ -1,11 +1,13 @@
-import { Badge } from '@/components/badge/Badge'
+import { Badge } from '@/components/badge/Badge';
 
 export default function BadgePage() {
   return (
     <div className="page">
       <header className="page-header">
         <h1 className="page-title">Badge</h1>
-        <p className="page-description">Status labels with dot indicator, multiple variants, sizes and removable chips.</p>
+        <p className="page-description">
+          Status labels with dot indicator, multiple variants, sizes and removable chips.
+        </p>
       </header>
 
       <section className="demo-section">
@@ -56,5 +58,5 @@ export default function BadgePage() {
         </div>
       </section>
     </div>
-  )
+  );
 }

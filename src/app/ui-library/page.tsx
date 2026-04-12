@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation'
+import { redirect } from 'next/navigation';
 
 export default function UILibraryPage() {
-  redirect('/ui-library/home')
+  redirect('/ui-library/home');
 }

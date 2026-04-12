@@ -1,40 +1,47 @@
-'use client'
-import { useState } from 'react'
+'use client';
+import { useState } from 'react';
 
 export interface RadioOption {
-  label: string
-  value: string | number
+  label: string;
+  value: string | number;
 }
 
 interface RadioFieldProps {
-  label?: string
-  hint?: string
-  validateMessage?: string
-  options?: RadioOption[]
-  value?: string | number
-  disabled?: boolean
-  required?: boolean
-  layout?: 'horizontal' | 'vertical'
-  onChange?: (value: string | number) => void
+  label?: string;
+  hint?: string;
+  validateMessage?: string;
+  options?: RadioOption[];
+  value?: string | number;
+  disabled?: boolean;
+  required?: boolean;
+  layout?: 'horizontal' | 'vertical';
+  onChange?: (value: string | number) => void;
 }
 
 export function RadioField({
-  label, hint, validateMessage, options = [], value, disabled = false,
-  required = false, layout = 'vertical', onChange
+  label,
+  hint,
+  validateMessage,
+  options = [],
+  value,
+  disabled = false,
+  required = false,
+  layout = 'vertical',
+  onChange,
 }: RadioFieldProps) {
-  const [selected, setSelected] = useState<string | number>(value ?? '')
+  const [selected, setSelected] = useState<string | number>(value ?? '');
 
   function select(val: string | number) {
-    if (disabled) return
-    setSelected(val)
-    onChange?.(val)
+    if (disabled) return;
+    setSelected(val);
+    onChange?.(val);
   }
 
   return (
     <div className="field radio-field">
       {label && <label className={`field-label${required ? ' required' : ''}`}>{label}</label>}
       <div className={`radio-group ${layout}${validateMessage ? ' error' : ''}`}>
-        {options.map(opt => (
+        {options.map((opt) => (
           <label
             key={opt.value}
             className={`radio-label${disabled ? ' disabled' : ''}`}
@@ -50,5 +57,5 @@ export function RadioField({
       {hint && !validateMessage && <div className="field-hint">{hint}</div>}
       {validateMessage && <div className="validate-message">{validateMessage}</div>}
     </div>
-  )
+  );
 }

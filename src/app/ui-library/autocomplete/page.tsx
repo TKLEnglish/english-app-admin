@@ -1,6 +1,6 @@
-'use client'
-import { useState } from 'react'
-import { AutocompleteField } from '@/components/autocomplete-field/AutocompleteField'
+'use client';
+import { useState } from 'react';
+import { AutocompleteField } from '@/components/autocomplete-field/AutocompleteField';
 
 const COUNTRIES = [
   { label: 'United States', value: 'us' },
@@ -13,25 +13,31 @@ const COUNTRIES = [
   { label: 'Brazil', value: 'br' },
   { label: 'India', value: 'in' },
   { label: 'China', value: 'cn' },
-]
+];
 
 export default function AutocompletePage() {
-  const [single, setSingle] = useState<string | number>('')
-  const [multi, setMulti] = useState<(string | number)[]>([])
+  const [single, setSingle] = useState<string | number>('');
+  const [multi, setMulti] = useState<(string | number)[]>([]);
 
   return (
     <div className="page">
       <header className="page-header">
         <h1 className="page-title">Autocomplete</h1>
-        <p className="page-description">Searchable single and multi-select with chip tags and keyboard navigation.</p>
+        <p className="page-description">
+          Searchable single and multi-select with chip tags and keyboard navigation.
+        </p>
       </header>
 
       <section className="demo-section">
         <h2 className="demo-section-title">Single Select</h2>
         <div className="demo-card">
           <AutocompleteField
-            label="Country" options={COUNTRIES} placeholder="Search countries…"
-            value={single} onChange={setSingle} hint="Start typing to filter results"
+            label="Country"
+            options={COUNTRIES}
+            placeholder="Search countries…"
+            value={single}
+            onChange={setSingle}
+            hint="Start typing to filter results"
           />
           {single && <p className="demo-value">Selected: {single}</p>}
         </div>
@@ -41,8 +47,12 @@ export default function AutocompletePage() {
         <h2 className="demo-section-title">Multi Select</h2>
         <div className="demo-card">
           <AutocompleteField
-            label="Countries" options={COUNTRIES} placeholder="Search and add countries…"
-            multi values={multi} onChanges={setMulti}
+            label="Countries"
+            options={COUNTRIES}
+            placeholder="Search and add countries…"
+            multi
+            values={multi}
+            onChanges={setMulti}
           />
           {multi.length > 0 && <p className="demo-value">Selected: {multi.join(', ')}</p>}
         </div>
@@ -51,11 +61,15 @@ export default function AutocompletePage() {
       <section className="demo-section">
         <h2 className="demo-section-title">States</h2>
         <div className="demo-card">
-          <AutocompleteField label="With Error" options={COUNTRIES} validateMessage="A selection is required" />
+          <AutocompleteField
+            label="With Error"
+            options={COUNTRIES}
+            validateMessage="A selection is required"
+          />
           <AutocompleteField label="Disabled" options={COUNTRIES} disabled />
           <AutocompleteField label="Required" options={COUNTRIES} required />
         </div>
       </section>
     </div>
-  )
+  );
 }

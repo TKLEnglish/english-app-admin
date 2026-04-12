@@ -1,18 +1,23 @@
-import { Tooltip } from '@/components/tooltip/Tooltip'
-import { Button } from '@/components/button/Button'
+import { Tooltip } from '@/components/tooltip/Tooltip';
+import { Button } from '@/components/button/Button';
 
 export default function TooltipPage() {
   return (
     <div className="page">
       <header className="page-header">
         <h1 className="page-title">Tooltip</h1>
-        <p className="page-description">Hover or focus tooltip with 4 placement options and configurable delay.</p>
+        <p className="page-description">
+          Hover or focus tooltip with 4 placement options and configurable delay.
+        </p>
       </header>
 
       <section className="demo-section">
         <h2 className="demo-section-title">Placements</h2>
         <div className="demo-card">
-          <div className="demo-row" style={{ flexWrap: 'wrap', gap: '2rem', justifyContent: 'center', padding: '2rem 0' }}>
+          <div
+            className="demo-row"
+            style={{ flexWrap: 'wrap', gap: '2rem', justifyContent: 'center', padding: '2rem 0' }}
+          >
             <Tooltip content="This is a top tooltip" placement="top">
               <Button variant="outline">Top</Button>
             </Tooltip>
@@ -52,12 +57,14 @@ export default function TooltipPage() {
           <p>
             Hover over{' '}
             <Tooltip content="This term means 'beyond the physical'" placement="bottom">
-              <span style={{ textDecoration: 'underline dotted', cursor: 'help' }}>metaphysical</span>
-            </Tooltip>
-            {' '}to see the tooltip on text.
+              <span style={{ textDecoration: 'underline dotted', cursor: 'help' }}>
+                metaphysical
+              </span>
+            </Tooltip>{' '}
+            to see the tooltip on text.
           </p>
         </div>
       </section>
     </div>
-  )
+  );
 }
