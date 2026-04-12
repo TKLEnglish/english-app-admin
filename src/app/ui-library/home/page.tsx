@@ -3,6 +3,7 @@ import { GlassCard } from '@/components/glass-card/GlassCard'
 const cards = [
   { title: 'Text Field', description: 'Input with label, hint, validation, sizes & colors', route: '/ui-library/text-field', icon: 'Tf', color: 'blue' as const, category: 'Form Fields' },
   { title: 'Number Field', description: 'Masked input for integer, phone, currency & more', route: '/ui-library/number-field', icon: 'Nf', color: 'violet' as const, category: 'Form Fields' },
+  { title: 'File Chooser', description: 'File picker with sizes, type filtering & validation', route: '/ui-library/file-chooser', icon: 'Fc', color: 'emerald' as const, category: 'Form Fields' },
   { title: 'Selector', description: 'Dropdown single-select with keyboard navigation', route: '/ui-library/selector', icon: 'Sf', color: 'emerald' as const, category: 'Form Fields' },
   { title: 'Calendar', description: 'Date picker with month navigation & typed entry', route: '/ui-library/calendar', icon: 'Ca', color: 'amber' as const, category: 'Form Fields' },
   { title: 'Autocomplete', description: 'Searchable single & multi-select with chip tags', route: '/ui-library/autocomplete', icon: 'Ac', color: 'rose' as const, category: 'Form Fields' },

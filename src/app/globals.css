@@ -284,7 +284,7 @@ body {
   font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
   color: var(--gray-400); user-select: none;
 }
-@media (max-width: 768px) { .navbar-menu { display: none; } .navbar-toggle { display: flex; } }
+@media (max-width: 768px) { .navbar-menu { display: none; } .navbar-toggle { display: flex; } .accent-dot { display: none; } }
 
 /* -- Theme Switcher -- */
 .theme-switcher { display: flex; align-items: center; gap: 0.375rem; }
@@ -655,6 +655,46 @@ body {
 .field.lg .checkmark { width: 14px; height: 14px; }
 .field.error .checkbox-box:not(.checked) { border-color: rgba(239, 68, 68, 0.55); }
 .field.disabled .checkbox-label { cursor: not-allowed; opacity: 0.5; }
+
+/* ============================================================
+   File Chooser Field
+   ============================================================ */
+.file-chooser-trigger {
+  display: flex; align-items: center; gap: 0.5rem; width: 100%; cursor: pointer;
+  border: 1.5px solid var(--input-border); border-radius: 8px;
+  background: var(--input-bg);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  backdrop-filter: blur(12px) saturate(160%);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+  color: var(--text-primary); font-family: inherit; font-weight: 500;
+  transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+  user-select: none; outline: none;
+}
+.file-chooser-trigger.sm { height: var(--size-sm); padding: 0 0.5rem; font-size: 0.75rem; }
+.file-chooser-trigger.md { height: var(--size-md); padding: 0 0.75rem; font-size: 0.875rem; }
+.file-chooser-trigger.lg { height: var(--size-lg); padding: 0 1rem; font-size: 1rem; }
+.file-chooser-trigger:hover:not(.disabled) { border-color: var(--glass-border-hover); background: var(--glass-bg-heavy); }
+.file-chooser-trigger:focus-visible:not(.disabled) {
+  border-color: color-mix(in srgb, var(--accent-color) 60%, transparent);
+  box-shadow: var(--accent-focus-ring), var(--glass-highlight);
+  background: var(--input-focus-bg);
+}
+.file-chooser-trigger.error { border-color: var(--error-color); }
+.file-chooser-trigger.error:focus-visible { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1); }
+.file-chooser-trigger.disabled { opacity: 0.5; cursor: not-allowed; }
+.file-chooser-icon { display: flex; align-items: center; flex-shrink: 0; color: var(--accent-color); }
+.file-chooser-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-chooser-text.placeholder { color: var(--text-placeholder); font-weight: 400; }
+.file-chooser-clear {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 20px; height: 20px; border-radius: 50%; border: none; background: transparent;
+  color: var(--text-secondary); cursor: pointer; padding: 0;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.file-chooser-clear:hover { background: var(--hover-bg); color: var(--text-primary); }
+@media (max-width: 480px) {
+  .file-chooser-trigger.sm, .file-chooser-trigger.md { height: var(--size-lg); padding: 0 1rem; font-size: 1rem; }
+}
 
 /* ============================================================
    Radio Field

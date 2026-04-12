@@ -6,6 +6,7 @@ import { Dialog } from '@/components/dialog/Dialog'
 import { TextField } from '@/components/text-field/TextField'
 import { Badge } from '@/components/badge/Badge'
 import { CheckboxField } from '@/components/checkbox-field/CheckboxField'
+import { FileChooserField } from '@/components/file-chooser-field/FileChooserField'
 import { useAuth } from '@/hooks/useAuth'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1'
@@ -14,8 +15,8 @@ interface VocabularyMeaning {
   id: number
   meaning: string
   languageCode: string
-  exampleSentence?: string
-  exampleTranslation?: string
+  exampleSentence?: string | null
+  displayOrder: number
 }
 
 interface VocabularyCategory {
@@ -25,48 +26,42 @@ interface VocabularyCategory {
 
 interface VocabularyPronunciation {
   id: number
-  ipa: string
-  audioUrl?: string
-}
-
-interface VocabularyForm {
-  id: number
-  formType: string
-  value: string
+  dialect: string
+  ipa?: string | null
+  audioUrl?: string | null
+  displayOrder: number
 }
 
 interface Vocabulary {
   id: number
   word: string
-  partOfSpeech?: string
   level?: string
-  difficulty: number
-  imageUrl?: string
-  imagePublicId?: string
-  isActive: boolean
-  deletedAt?: string | null
+  imageUrl?: string | null
   createdAt: string
   updatedAt: string
   meanings: VocabularyMeaning[]
   categories: VocabularyCategory[]
   pronunciations: VocabularyPronunciation[]
-  forms: VocabularyForm[]
 }
 
-interface PaginatedResponse<T> {
-  data: T[]
-  total: number
-  page: number
-  limit: number
+interface FormMeaning {
+  meaning: string
+  exampleSentence: string
+  languageCode: string
+}
+
+interface FormPronunciation {
+  dialect: string
+  ipa: string
+  audioFile?: File | null
 }
 
 const COLUMNS: TableColumn[] = [
   { key: 'id', label: 'ID', sortable: true, width: '60px' },
   { key: 'word', label: 'Word', sortable: true, filterable: true },
-  { key: 'partOfSpeech', label: 'Part of Speech', sortable: true },
-  { key: 'level', label: 'Level', sortable: true },
-  { key: 'difficulty', label: 'Difficulty', sortable: true, width: '90px' },
-  { key: 'isActive', label: 'Status', sortable: true, width: '90px' },
+  { key: 'level', label: 'Level', sortable: true, width: '130px' },
+  { key: 'meaning', label: 'Meaning' },
+  { key: 'pronunciation', label: 'Pronunciation', width: '160px' },
   { key: 'actions', label: '', width: '120px' },
 ]
 
@@ -81,17 +76,13 @@ function levelBadge(level?: string) {
 }
 
 function emptyForm() {
-  return { 
-    word: '', 
-    partOfSpeech: '', 
-    level: '', 
-    difficulty: '1', 
-    imageUrl: '',
+  return {
+    word: '',
+    level: '',
+    topic: '',
     isActive: true,
-    meaning: '', 
-    exampleSentence: '',
-    ipa: '',
-    categories: '',
+    meanings: [{ meaning: '', exampleSentence: '', languageCode: 'vi' }] as FormMeaning[],
+    pronunciations: [{ dialect: '', ipa: '' }] as FormPronunciation[],
   }
 }
 
@@ -138,6 +129,25 @@ export default function VocabularyPage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  function updateMeaning(i: number, field: keyof FormMeaning, v: string) {
+    setForm(f => ({ ...f, meanings: f.meanings.map((m, idx) => idx === i ? { ...m, [field]: v } : m) }))
+  }
+  function addMeaning() {
+    setForm(f => ({ ...f, meanings: [...f.meanings, { meaning: '', exampleSentence: '', languageCode: 'vi' }] }))
+  }
+  function removeMeaning(i: number) {
+    setForm(f => ({ ...f, meanings: f.meanings.filter((_, idx) => idx !== i) }))
+  }
+  function updatePron(i: number, field: keyof FormPronunciation, v: string) {
+    setForm(f => ({ ...f, pronunciations: f.pronunciations.map((p, idx) => idx === i ? { ...p, [field]: v } : p) }))
+  }
+  function addPron() {
+    setForm(f => ({ ...f, pronunciations: [...f.pronunciations, { dialect: '', ipa: '' }] }))
+  }
+  function removePron(i: number) {
+    setForm(f => ({ ...f, pronunciations: f.pronunciations.filter((_, idx) => idx !== i) }))
+  }
+
   function openCreate() {
     setEditItem(null)
     setForm(emptyForm())
@@ -149,15 +159,15 @@ export default function VocabularyPage() {
     setEditItem(item)
     setForm({
       word: item.word,
-      ipa: item.pronunciations?.[0]?.ipa ?? '',
-      partOfSpeech: item.partOfSpeech ?? '',
       level: item.level ?? '',
-      difficulty: String(item.difficulty),
-      imageUrl: item.imageUrl ?? '',
-      isActive: item.isActive,
-      meaning: item.meanings?.[0]?.meaning ?? '',
-      exampleSentence: item.meanings?.[0]?.exampleSentence ?? '',
-      categories: item.categories?.map(c => c.name).join(', ') ?? '',
+      topic: item.categories?.[0]?.name ?? '',
+      isActive: true,
+      meanings: item.meanings?.length
+        ? item.meanings.map(m => ({ meaning: m.meaning, exampleSentence: m.exampleSentence ?? '', languageCode: m.languageCode }))
+        : [{ meaning: '', exampleSentence: '', languageCode: 'vi' }],
+      pronunciations: item.pronunciations?.length
+        ? item.pronunciations.map(p => ({ dialect: p.dialect, ipa: p.ipa ?? '' }))
+        : [{ dialect: '', ipa: '' }],
     })
     setError('')
     setDialogOpen(true)
@@ -170,36 +180,40 @@ export default function VocabularyPage() {
 
   async function handleSave() {
     if (!form.word.trim()) { setError('Word is required'); return }
-    if (!form.meaning.trim()) { setError('Meaning is required'); return }
+    const validMeanings = form.meanings.filter(m => m.meaning.trim())
+    if (validMeanings.length === 0) { setError('At least one meaning is required'); return }
     setSaving(true)
     setError('')
     try {
-      const categoriesArray = form.categories
-        ? form.categories.split(',').map(c => c.trim()).filter(Boolean)
-        : []
-      
-      const payload = {
-        word: form.word.trim(),
-        partOfSpeech: form.partOfSpeech || undefined,
-        level: form.level || undefined,
-        difficulty: parseInt(form.difficulty) || 1,
-        imageUrl: form.imageUrl || undefined,
-        isActive: form.isActive,
-        meaning: form.meaning || undefined,
-        exampleSentence: form.exampleSentence || undefined,
-        ipa: form.ipa || undefined,
-        categories: categoriesArray.length > 0 ? categoriesArray : undefined,
+      const fd = new FormData()
+      fd.append('word', form.word.trim())
+      if (form.level) fd.append('level', form.level)
+      if (form.topic.trim()) fd.append('topic', form.topic.trim())
+      if (editItem) fd.append('isActive', String(form.isActive))
+      fd.append('meanings', JSON.stringify(validMeanings.map((m, i) => ({
+        meaning: m.meaning.trim(),
+        ...(m.exampleSentence?.trim() ? { exampleSentence: m.exampleSentence.trim() } : {}),
+        languageCode: m.languageCode || 'vi',
+        displayOrder: i + 1,
+      }))))
+      const validProns = form.pronunciations.filter(p => p.dialect.trim())
+      if (validProns.length > 0) {
+        fd.append('pronunciations', JSON.stringify(validProns.map((p, i) => ({
+          dialect: p.dialect.trim(),
+          ...(p.ipa?.trim() ? { ipa: p.ipa.trim() } : {}),
+          displayOrder: i + 1,
+        }))))
+        validProns.forEach((p, i) => {
+          if (p.audioFile) fd.append(`audio_${i}`, p.audioFile)
+        })
       }
       const url = editItem
         ? `${API_BASE}/private/vocabulary/${editItem.id}`
         : `${API_BASE}/private/vocabulary`
       const res = await fetch(url, {
         method: editItem ? 'PATCH' : 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token.access}` } : {}),
-        },
-        body: JSON.stringify(payload),
+        headers: token ? { Authorization: `Bearer ${token.access}` } : {},
+        body: fd,
       })
       if (!res.ok) {
         const data = await res.json()
@@ -231,9 +245,11 @@ export default function VocabularyPage() {
 
   const tableData = items.map(item => ({
     ...item,
-    partOfSpeech: item.partOfSpeech ?? '—',
     level: levelBadge(item.level),
-    isActive: item.isActive ? <Badge variant="info" size="sm">Active</Badge> : <Badge variant="warning" size="sm">Inactive</Badge>,
+    meaning: item.meanings?.[0]?.meaning ?? '—',
+    pronunciation: item.pronunciations?.[0]
+      ? `${item.pronunciations[0].dialect}${item.pronunciations[0].ipa ? ' ' + item.pronunciations[0].ipa : ''}`
+      : '—',
     actions: (
       <div style={{ display: 'flex', gap: '0.5rem' }}>
         <Button size="sm" variant="ghost" onClick={() => openEdit(item)}>Edit</Button>
@@ -294,29 +310,69 @@ export default function VocabularyPage() {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {error && <div className="validate-message">{error}</div>}
-          
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <TextField label="Word" placeholder="e.g. abundant" required value={form.word} onChange={v => setForm(f => ({ ...f, word: v }))} />
-            <TextField label="Part of Speech" placeholder="e.g. adjective" value={form.partOfSpeech} onChange={v => setForm(f => ({ ...f, partOfSpeech: v }))} />
             <TextField label="Level" placeholder="BEGINNER / INTERMEDIATE / ADVANCED" value={form.level} onChange={v => setForm(f => ({ ...f, level: v }))} />
-            <TextField label="Difficulty (1–5)" type="number" placeholder="1" value={form.difficulty} onChange={v => setForm(f => ({ ...f, difficulty: v }))} />
           </div>
 
-          <TextField label="IPA (Pronunciation)" placeholder="e.g. /əˈbʌn.dənt/" value={form.ipa} onChange={v => setForm(f => ({ ...f, ipa: v }))} />
-          
-          <TextField label="Image URL" placeholder="e.g. https://example.com/image.jpg" value={form.imageUrl} onChange={v => setForm(f => ({ ...f, imageUrl: v }))} />
-          
-          <TextField label="Categories (comma-separated)" placeholder="e.g. nature, adjective, positive" value={form.categories} onChange={v => setForm(f => ({ ...f, categories: v }))} />
-          
-          <TextField label="Meaning (Vietnamese)" placeholder="e.g. dồi dào, phong phú" required value={form.meaning} onChange={v => setForm(f => ({ ...f, meaning: v }))} />
-          
-          <TextField label="Example Sentence" placeholder="e.g. The forest is abundant in wildlife." value={form.exampleSentence} onChange={v => setForm(f => ({ ...f, exampleSentence: v }))} />
+          <TextField label="Topic / Category" placeholder="e.g. food, nature, travel" value={form.topic} onChange={v => setForm(f => ({ ...f, topic: v }))} />
 
-          <CheckboxField 
-            label="Active" 
-            checked={form.isActive} 
-            onChange={v => setForm(f => ({ ...f, isActive: v }))} 
-          />
+          <div>
+            <div className="field-label" style={{ marginBottom: '0.5rem' }}>Meanings</div>
+            {form.meanings.map((m, i) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.625rem', padding: '0.75rem', border: '1px solid var(--divider)', borderRadius: 'var(--radius-md)' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+                  <div style={{ flex: 1 }}>
+                    <TextField label={`Meaning ${i + 1}`} placeholder="e.g. dồi dào, phong phú" required={i === 0} value={m.meaning} onChange={v => updateMeaning(i, 'meaning', v)} />
+                  </div>
+                  <div style={{ width: '64px' }}>
+                    <TextField label="Lang" placeholder="vi" value={m.languageCode} onChange={v => updateMeaning(i, 'languageCode', v)} />
+                  </div>
+                  {form.meanings.length > 1 && (
+                    <Button size="md" variant="danger" onClick={() => removeMeaning(i)}>✕</Button>
+                  )}
+                </div>
+                <TextField label="Example Sentence" placeholder="e.g. The forest is abundant in wildlife." value={m.exampleSentence} onChange={v => updateMeaning(i, 'exampleSentence', v)} />
+              </div>
+            ))}
+            <Button size="sm" variant="ghost" onClick={addMeaning}>+ Add Meaning</Button>
+          </div>
+
+          <div>
+            <div className="field-label" style={{ marginBottom: '0.5rem' }}>Pronunciations</div>
+            {form.pronunciations.map((p, i) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.625rem', padding: '0.75rem', border: '1px solid var(--divider)', borderRadius: 'var(--radius-md)' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+                  <div style={{ width: '80px' }}>
+                    <TextField label="Dialect" placeholder="US / UK" value={p.dialect} onChange={v => updatePron(i, 'dialect', v)} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <TextField label="IPA" placeholder="e.g. /əˈbʌn.dənt/" value={p.ipa} onChange={v => updatePron(i, 'ipa', v)} />
+                  </div>
+                  {form.pronunciations.length > 1 && (
+                    <Button size="md" variant="danger" onClick={() => removePron(i)}>✕</Button>
+                  )}
+                </div>
+                <FileChooserField
+                  label="Audio file"
+                  accept="audio/*"
+                  value={p.audioFile ?? null}
+                  hint="MP3, WAV, OGG, etc."
+                  onChange={file => setForm(f => ({ ...f, pronunciations: f.pronunciations.map((pp, idx) => idx === i ? { ...pp, audioFile: file } : pp) }))}
+                />
+              </div>
+            ))}
+            <Button size="sm" variant="ghost" onClick={addPron}>+ Add Pronunciation</Button>
+          </div>
+
+          {editItem && (
+            <CheckboxField
+              label="Active"
+              checked={form.isActive}
+              onChange={v => setForm(f => ({ ...f, isActive: v }))}
+            />
+          )}
         </div>
       </Dialog>
 
