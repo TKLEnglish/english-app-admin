@@ -4,7 +4,9 @@ import { DataTable, TableColumn, SortState } from '@/components/data-table/DataT
 import { Button } from '@/components/button/Button';
 import { Dialog } from '@/components/dialog/Dialog';
 import { TextField } from '@/components/text-field/TextField';
+import { CheckboxField } from '@/components/checkbox-field/CheckboxField';
 import { FileChooserField } from '@/components/file-chooser-field/FileChooserField';
+import { Badge } from '@/components/badge/Badge';
 import { useAuth } from '@/hooks/useAuth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
@@ -13,6 +15,7 @@ interface Category {
   id: number;
   name: string;
   description?: string;
+  isPublic?: boolean;
   createdAt: string;
 }
 
@@ -20,6 +23,7 @@ const COLUMNS: TableColumn[] = [
   { key: 'id', label: 'ID', sortable: true, width: '60px' },
   { key: 'name', label: 'Name', sortable: true, filterable: true },
   { key: 'description', label: 'Description', filterable: true },
+  { key: 'isPublic', label: 'Public', width: '80px' },
   { key: 'createdAt', label: 'Created', sortable: true, width: '140px' },
   { key: 'actions', label: '', width: '120px' },
 ];
@@ -35,7 +39,7 @@ const WORD_IMPORT_PATTERN = /^[\p{L}][\p{L}\p{N}' -]*$/u;
 const MAX_WORD_LENGTH = 64;
 
 function emptyForm() {
-  return { name: '', description: '' };
+  return { name: '', description: '', isPublic: false };
 }
 
 function pluralize(count: number, singular: string, plural = `${singular}s`) {
@@ -103,7 +107,7 @@ export default function CategoryPage() {
 
   function openEdit(item: Category) {
     setEditItem(item);
-    setForm({ name: item.name, description: item.description ?? '' });
+    setForm({ name: item.name, description: item.description ?? '', isPublic: item.isPublic ?? false });
     setError('');
     setImportFile(null);
     setImportError('');
@@ -127,6 +131,7 @@ export default function CategoryPage() {
       const payload = {
         name: form.name.trim(),
         description: form.description || undefined,
+        isPublic: form.isPublic,
       };
       const url = editItem
         ? `${API_BASE}/private/category/${editItem.id}`
@@ -259,6 +264,11 @@ export default function CategoryPage() {
   const tableData = items.map((item) => ({
     ...item,
     description: item.description ?? '—',
+    isPublic: item.isPublic ? (
+      <Badge variant="success" size="sm">Yes</Badge>
+    ) : (
+      <Badge variant="secondary" size="sm">No</Badge>
+    ),
     createdAt: new Date(item.createdAt).toLocaleDateString(),
     actions: (
       <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -357,6 +367,13 @@ export default function CategoryPage() {
             placeholder="Optional description"
             value={form.description}
             onChange={(v) => setForm((f) => ({ ...f, description: v }))}
+          />
+          <CheckboxField
+            key={editItem?.id ?? 'new'}
+            label="Public"
+            hint="When checked, this collection is visible to all users."
+            checked={form.isPublic}
+            onChange={(v) => setForm((f) => ({ ...f, isPublic: v }))}
           />
           {editItem && (
             <div
