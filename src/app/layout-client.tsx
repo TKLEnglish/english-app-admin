@@ -9,7 +9,8 @@ import { Button } from '@/components/button/Button';
 
 const navItems = [
   { label: 'Vocabulary', route: '/vocabulary' },
-  { label: 'Collections', route: '/category' },
+  { label: 'Categories', route: '/category' },
+  { label: 'Collections', route: '/collection' },
   { label: 'Users', route: '/users' },
   { label: 'UI Library', route: '/ui-library' },
 ];
