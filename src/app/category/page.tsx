@@ -23,7 +23,7 @@ const COLUMNS: TableColumn[] = [
   { key: 'id', label: 'ID', sortable: true, width: '60px' },
   { key: 'name', label: 'Name', sortable: true, filterable: true },
   { key: 'description', label: 'Description', filterable: true },
-  { key: 'isPublic', label: 'Public', width: '80px' },
+  { key: 'isPublic', label: 'Visibility', width: '80px' },
   { key: 'createdAt', label: 'Created', sortable: true, width: '140px' },
   { key: 'actions', label: '', width: '120px' },
 ];
