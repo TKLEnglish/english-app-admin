@@ -4,7 +4,7 @@ import { DataTable, TableColumn, SortState } from '@/components/data-table/DataT
 import { Button } from '@/components/button/Button';
 import { Dialog } from '@/components/dialog/Dialog';
 import { TextField } from '@/components/text-field/TextField';
-import { Badge } from '@/components/badge/Badge';
+import { FileChooserField } from '@/components/file-chooser-field/FileChooserField';
 import { useAuth } from '@/hooks/useAuth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
@@ -14,13 +14,6 @@ interface Category {
   name: string;
   description?: string;
   createdAt: string;
-}
-
-interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
 }
 
 const COLUMNS: TableColumn[] = [
@@ -51,6 +44,10 @@ export default function CategoryPage() {
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState('');
+  const [importSuccess, setImportSuccess] = useState('');
 
   const limit = 10;
 
@@ -84,6 +81,9 @@ export default function CategoryPage() {
     setEditItem(null);
     setForm(emptyForm());
     setError('');
+    setImportFile(null);
+    setImportError('');
+    setImportSuccess('');
     setDialogOpen(true);
   }
 
@@ -91,6 +91,9 @@ export default function CategoryPage() {
     setEditItem(item);
     setForm({ name: item.name, description: item.description ?? '' });
     setError('');
+    setImportFile(null);
+    setImportError('');
+    setImportSuccess('');
     setDialogOpen(true);
   }
 
@@ -150,6 +153,77 @@ export default function CategoryPage() {
     }
   }
 
+  async function handleImportWords() {
+    if (!editItem) {
+      setImportError('Please save collection before importing words.');
+      return;
+    }
+    if (!importFile) {
+      setImportError('Please choose a .txt file to import.');
+      return;
+    }
+
+    setImporting(true);
+    setImportError('');
+    setImportSuccess('');
+
+    try {
+      const content = await importFile.text();
+      const words = [...new Set(content.split(/\r?\n/).map((line) => line.trim()).filter(Boolean))];
+      if (!words.length) {
+        throw new Error('File is empty. Please provide one word per line.');
+      }
+
+      const endpoints = [
+        `${API_BASE}/private/collection/${editItem.id}/import-words`,
+        `${API_BASE}/private/collection/${editItem.id}/import`,
+        `${API_BASE}/private/category/${editItem.id}/import-words`,
+        `${API_BASE}/private/category/${editItem.id}/import`,
+      ];
+
+      let imported = false;
+
+      for (const url of endpoints) {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: 'Bearer ' + token.access } : {}),
+          },
+          body: JSON.stringify({ words }),
+        });
+
+        if (res.status === 404) continue;
+
+        if (!res.ok) {
+          let message = 'Import failed';
+          try {
+            const data = await res.json();
+            message = data?.message ?? message;
+          } catch {
+            // no-op
+          }
+          throw new Error(message);
+        }
+
+        imported = true;
+        break;
+      }
+
+      if (!imported) {
+        throw new Error('Import endpoint not found in API.');
+      }
+
+      setImportSuccess(`Imported ${words.length} word${words.length > 1 ? 's' : ''} successfully.`);
+      setImportFile(null);
+      fetchData();
+    } catch (e) {
+      setImportError(e instanceof Error ? e.message : 'Import failed');
+    } finally {
+      setImporting(false);
+    }
+  }
+
   const tableData = items.map((item) => ({
     ...item,
     description: item.description ?? '—',
@@ -171,8 +245,8 @@ export default function CategoryPage() {
   return (
     <div className="page">
       <header className="page-header">
-        <h1 className="page-title">Categories</h1>
-        <p className="page-description">Manage vocabulary categories and topics.</p>
+        <h1 className="page-title">Collections</h1>
+        <p className="page-description">Manage vocabulary collections and topics.</p>
       </header>
 
       <section className="demo-section">
@@ -189,7 +263,7 @@ export default function CategoryPage() {
             />
           </div>
           <Button variant="primary" onClick={openCreate}>
-            + New Category
+            + New Collection
           </Button>
         </div>
 
@@ -197,7 +271,7 @@ export default function CategoryPage() {
           columns={COLUMNS}
           data={tableData}
           loading={loading}
-          emptyMessage="No categories found."
+          emptyMessage="No collections found."
           onSortChange={(s) => {
             setSort(s);
             setPage(1);
@@ -212,9 +286,14 @@ export default function CategoryPage() {
       {/* Create / Edit Dialog */}
       <Dialog
         open={dialogOpen}
-        title={editItem ? 'Edit Category' : 'New Category'}
+        title={editItem ? 'Edit Collection' : 'New Collection'}
         size="md"
-        onClose={() => setDialogOpen(false)}
+        onClose={() => {
+          setDialogOpen(false);
+          setImportError('');
+          setImportSuccess('');
+          setImportFile(null);
+        }}
         footer={
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
             <Button variant="ghost" onClick={() => setDialogOpen(false)} disabled={saving}>
@@ -228,9 +307,15 @@ export default function CategoryPage() {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {error && <div className="validate-message">{error}</div>}
+          {importError && <div className="validate-message">{importError}</div>}
+          {importSuccess && (
+            <div className="field-hint" style={{ color: 'var(--success, #16a34a)' }}>
+              {importSuccess}
+            </div>
+          )}
           <TextField
             label="Name"
-            placeholder="e.g. Animals"
+            placeholder="e.g. Animal Words"
             required
             value={form.name}
             onChange={(v) => setForm((f) => ({ ...f, name: v }))}
@@ -241,13 +326,37 @@ export default function CategoryPage() {
             value={form.description}
             onChange={(v) => setForm((f) => ({ ...f, description: v }))}
           />
+          {editItem && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem',
+                paddingTop: '0.75rem',
+                borderTop: '1px solid var(--divider)',
+              }}
+            >
+              <FileChooserField
+                label="Import words from TXT"
+                accept=".txt,text/plain"
+                value={importFile}
+                hint="One word per line."
+                onChange={setImportFile}
+              />
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Button variant="secondary" onClick={handleImportWords} loading={importing}>
+                  Import
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteDialogOpen}
-        title="Delete Category"
+        title="Delete Collection"
         size="sm"
         onClose={() => setDeleteDialogOpen(false)}
         footer={
