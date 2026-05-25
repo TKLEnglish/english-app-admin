@@ -24,8 +24,22 @@ const COLUMNS: TableColumn[] = [
   { key: 'actions', label: '', width: '120px' },
 ];
 
+// Keep fallback order to support both collection and category API naming while backend endpoints converge.
+const IMPORT_ENDPOINT_TEMPLATES = [
+  '/private/collection/:id/import-words',
+  '/private/collection/:id/import',
+  '/private/category/:id/import-words',
+  '/private/category/:id/import',
+];
+const WORD_IMPORT_PATTERN = /^[\p{L}][\p{L}\p{N}' -]*$/u;
+const MAX_WORD_LENGTH = 64;
+
 function emptyForm() {
   return { name: '', description: '' };
+}
+
+function pluralize(count: number, singular: string, plural = `${singular}s`) {
+  return count === 1 ? singular : plural;
 }
 
 export default function CategoryPage() {
@@ -155,7 +169,7 @@ export default function CategoryPage() {
 
   async function handleImportWords() {
     if (!editItem) {
-      setImportError('Please save collection before importing words.');
+      setImportError('Cannot import words to a new collection. Please save the collection first.');
       return;
     }
     if (!importFile) {
@@ -169,21 +183,31 @@ export default function CategoryPage() {
 
     try {
       const content = await importFile.text();
-      const words = [...new Set(content.split(/\r?\n/).map((line) => line.trim()).filter(Boolean))];
+      const rawWords = content.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      const words = [...new Set(rawWords)];
+      const duplicateCount = rawWords.length - words.length;
       if (!words.length) {
         throw new Error('File is empty. Please provide one word per line.');
       }
+      const invalidWords = words.filter(
+        (word) => word.length > MAX_WORD_LENGTH || !WORD_IMPORT_PATTERN.test(word),
+      );
+      if (invalidWords.length) {
+        throw new Error(
+          `Invalid word format in file: ${invalidWords.slice(0, 3).join(', ')}${invalidWords.length > 3 ? ', ...' : ''}.`,
+        );
+      }
 
-      const endpoints = [
-        `${API_BASE}/private/collection/${editItem.id}/import-words`,
-        `${API_BASE}/private/collection/${editItem.id}/import`,
-        `${API_BASE}/private/category/${editItem.id}/import-words`,
-        `${API_BASE}/private/category/${editItem.id}/import`,
-      ];
+      const endpoints = IMPORT_ENDPOINT_TEMPLATES.map(
+        (template) => `${API_BASE}${template.replace(':id', String(editItem.id))}`,
+      );
 
       let imported = false;
+      const endpointErrors: string[] = [];
+      const attemptedEndpoints: string[] = [];
 
       for (const url of endpoints) {
+        attemptedEndpoints.push(url);
         const res = await fetch(url, {
           method: 'POST',
           headers: {
@@ -193,8 +217,6 @@ export default function CategoryPage() {
           body: JSON.stringify({ words }),
         });
 
-        if (res.status === 404) continue;
-
         if (!res.ok) {
           let message = 'Import failed';
           try {
@@ -203,7 +225,10 @@ export default function CategoryPage() {
           } catch {
             // no-op
           }
-          throw new Error(message);
+          endpointErrors.push(
+            `${url}: ${res.status === 404 ? 'Endpoint not found (404)' : message}`,
+          );
+          continue;
         }
 
         imported = true;
@@ -211,10 +236,17 @@ export default function CategoryPage() {
       }
 
       if (!imported) {
-        throw new Error('Import endpoint not found in API.');
+        throw new Error(
+          endpointErrors.length
+            ? `Import failed after trying multiple endpoints: ${endpointErrors.join(' | ')}`
+            :
+            `Import endpoint not found in API. Attempted: ${attemptedEndpoints.join(', ')}`,
+        );
       }
 
-      setImportSuccess(`Imported ${words.length} word${words.length > 1 ? 's' : ''} successfully.`);
+      setImportSuccess(
+        `Imported ${words.length} ${pluralize(words.length, 'word')} successfully${duplicateCount > 0 ? ` (${duplicateCount} ${pluralize(duplicateCount, 'duplicate')} skipped)` : ''}.`,
+      );
       setImportFile(null);
       fetchData();
     } catch (e) {
