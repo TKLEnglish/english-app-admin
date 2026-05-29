@@ -259,11 +259,11 @@ export default function CollectionPage() {
         body: JSON.stringify({ words }),
       });
 
-      if (res.status === 404) {
-        throw new Error(`Import endpoint not found. Attempted endpoints: ${urls.join(', ')}`);
-      }
-
       if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error(`Import endpoint not found. Attempted endpoints: ${urls.join(', ')}`);
+        }
+
         let message = 'Import failed';
         try {
           const data = await res.json();
