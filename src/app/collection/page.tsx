@@ -49,22 +49,30 @@ function pluralize(count: number, singular: string, plural = `${singular}s`) {
 
 async function fetchFirstAvailable(urls: string[], init?: RequestInit) {
   let lastNotFound: Response | null = null;
+  let lastError: Error | null = null;
 
   for (const url of urls) {
-    const response = await fetch(url, init);
-    if (response.status === 404) {
-      lastNotFound = response;
-      continue;
-    }
+    try {
+      const response = await fetch(url, init);
+      if (response.status === 404) {
+        lastNotFound = response;
+        continue;
+      }
 
-    return response;
+      return response;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('Unknown request error');
+    }
   }
 
   if (lastNotFound) {
     return lastNotFound;
   }
 
-  throw new Error('Request failed');
+  throw new Error(
+    `All endpoint requests failed. Attempted: ${urls.join(', ')}` +
+      (lastError ? ` (Last error: ${lastError.message})` : ''),
+  );
 }
 
 export default function CollectionPage() {
@@ -242,39 +250,28 @@ export default function CollectionPage() {
         (template) => `${API_BASE}${template.replace(':id', String(editItem.id))}`,
       );
 
-      let imported = false;
+      const res = await fetchFirstAvailable(urls, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token.access}` } : {}),
+        },
+        body: JSON.stringify({ words }),
+      });
 
-      for (const url of urls) {
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token.access}` } : {}),
-          },
-          body: JSON.stringify({ words }),
-        });
-
-        if (res.status === 404) {
-          continue;
-        }
-
-        if (!res.ok) {
-          let message = 'Import failed';
-          try {
-            const data = await res.json();
-            message = data?.message ?? message;
-          } catch {
-            // no-op
-          }
-          throw new Error(message);
-        }
-
-        imported = true;
-        break;
+      if (res.status === 404) {
+        throw new Error(`Import endpoint not found. Attempted endpoints: ${urls.join(', ')}`);
       }
 
-      if (!imported) {
-        throw new Error('Import endpoint not found');
+      if (!res.ok) {
+        let message = 'Import failed';
+        try {
+          const data = await res.json();
+          message = data?.message ?? message;
+        } catch {
+          // no-op
+        }
+        throw new Error(`${message}. Attempted endpoints: ${urls.join(', ')}`);
       }
 
       setImportSuccess(
