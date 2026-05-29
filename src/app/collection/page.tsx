@@ -10,6 +10,12 @@ import { Badge } from '@/components/badge/Badge';
 import { useAuth } from '@/hooks/useAuth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
+const COLLECTION_PUBLIC_ENDPOINT = '/public/collections';
+const COLLECTION_PRIVATE_ENDPOINT = '/private/collections';
+const IMPORT_ENDPOINT_TEMPLATES = [
+  '/private/collections/:id/import-words',
+  '/private/collections/:id/import',
+];
 
 interface Collection {
   id: number;
@@ -37,6 +43,34 @@ function emptyForm() {
 
 function pluralize(count: number, singular: string, plural = `${singular}s`) {
   return count === 1 ? singular : plural;
+}
+
+async function fetchFirstAvailable(urls: string[], init?: RequestInit) {
+  let lastNotFound: Response | null = null;
+  let lastError: Error | null = null;
+
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, init);
+      if (response.status === 404) {
+        lastNotFound = response;
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('Unknown request error');
+    }
+  }
+
+  if (lastNotFound) {
+    return lastNotFound;
+  }
+
+  throw new Error(
+    `All endpoint requests failed. Attempted: ${urls.join(', ')}` +
+      (lastError ? ` (Last error: ${lastError.message})` : ''),
+  );
 }
 
 export default function CollectionPage() {
@@ -71,7 +105,7 @@ export default function CollectionPage() {
         ...(search ? { search } : {}),
         ...(sort?.key ? { sortBy: sort.key, sortOrder: sort.direction ?? 'asc' } : {}),
       });
-      const res = await fetch(`${API_BASE}/public/collection?${params}`);
+      const res = await fetch(`${API_BASE}${COLLECTION_PUBLIC_ENDPOINT}?${params}`);
       if (!res.ok) throw new Error('Failed to fetch collections');
       const json = await res.json();
       const data = json.data?.items ?? [];
@@ -100,7 +134,11 @@ export default function CollectionPage() {
 
   function openEdit(item: Collection) {
     setEditItem(item);
-    setForm({ name: item.name, description: item.description ?? '', isPublic: item.isPublic ?? false });
+    setForm({
+      name: item.name,
+      description: item.description ?? '',
+      isPublic: item.isPublic ?? false,
+    });
     setError('');
     setImportFile(null);
     setImportError('');
@@ -127,8 +165,8 @@ export default function CollectionPage() {
         isPublic: form.isPublic,
       };
       const url = editItem
-        ? `${API_BASE}/private/collection/${editItem.id}`
-        : `${API_BASE}/private/collection`;
+        ? `${API_BASE}${COLLECTION_PRIVATE_ENDPOINT}/${editItem.id}`
+        : `${API_BASE}${COLLECTION_PRIVATE_ENDPOINT}`;
       const res = await fetch(url, {
         method: editItem ? 'PATCH' : 'POST',
         headers: {
@@ -154,7 +192,7 @@ export default function CollectionPage() {
     if (!deleteTarget) return;
     setSaving(true);
     try {
-      await fetch(`${API_BASE}/private/collection/${deleteTarget.id}`, {
+      await fetch(`${API_BASE}${COLLECTION_PRIVATE_ENDPOINT}/${deleteTarget.id}`, {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token.access}` } : {},
       });
@@ -181,7 +219,10 @@ export default function CollectionPage() {
 
     try {
       const content = await importFile.text();
-      const rawWords = content.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      const rawWords = content
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
       const words = [...new Set(rawWords)];
       const duplicateCount = rawWords.length - words.length;
       if (!words.length) {
@@ -196,8 +237,11 @@ export default function CollectionPage() {
         );
       }
 
-      const url = `${API_BASE}/private/collection/${editItem.id}/import-words`;
-      const res = await fetch(url, {
+      const urls = IMPORT_ENDPOINT_TEMPLATES.map(
+        (template) => `${API_BASE}${template.replace(':id', String(editItem.id))}`,
+      );
+
+      const res = await fetchFirstAvailable(urls, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -207,6 +251,10 @@ export default function CollectionPage() {
       });
 
       if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error(`Import endpoint not found. Attempted endpoints: ${urls.join(', ')}`);
+        }
+
         let message = 'Import failed';
         try {
           const data = await res.json();
@@ -233,9 +281,13 @@ export default function CollectionPage() {
     ...item,
     description: item.description ?? '—',
     isPublic: item.isPublic ? (
-      <Badge variant="success" size="sm">Yes</Badge>
+      <Badge variant="success" size="sm">
+        Yes
+      </Badge>
     ) : (
-      <Badge variant="secondary" size="sm">No</Badge>
+      <Badge variant="secondary" size="sm">
+        No
+      </Badge>
     ),
     createdAt: new Date(item.createdAt).toLocaleDateString(),
     actions: (
