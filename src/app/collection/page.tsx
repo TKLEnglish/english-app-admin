@@ -130,7 +130,11 @@ export default function CollectionPage() {
 
   function openEdit(item: Collection) {
     setEditItem(item);
-    setForm({ name: item.name, description: item.description ?? '', isPublic: item.isPublic ?? false });
+    setForm({
+      name: item.name,
+      description: item.description ?? '',
+      isPublic: item.isPublic ?? false,
+    });
     setError('');
     setImportFile(null);
     setImportError('');
@@ -164,7 +168,7 @@ export default function CollectionPage() {
           method: editItem ? 'PATCH' : 'POST',
           headers: {
             'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token.access}` } : {}),
+            ...(token ? { Authorization: `Bearer ${token.access}` } : {}),
           },
           body: JSON.stringify(payload),
         },
@@ -190,7 +194,7 @@ export default function CollectionPage() {
         COLLECTION_PRIVATE_ENDPOINTS.map((endpoint) => `${API_BASE}${endpoint}/${deleteTarget.id}`),
         {
           method: 'DELETE',
-        headers: token ? { Authorization: `Bearer ${token.access}` } : {},
+          headers: token ? { Authorization: `Bearer ${token.access}` } : {},
         },
       );
       setDeleteDialogOpen(false);
@@ -216,7 +220,10 @@ export default function CollectionPage() {
 
     try {
       const content = await importFile.text();
-      const rawWords = content.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      const rawWords = content
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
       const words = [...new Set(rawWords)];
       const duplicateCount = rawWords.length - words.length;
       if (!words.length) {
@@ -242,7 +249,7 @@ export default function CollectionPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token.access}` } : {}),
+            ...(token ? { Authorization: `Bearer ${token.access}` } : {}),
           },
           body: JSON.stringify({ words }),
         });
@@ -286,9 +293,13 @@ export default function CollectionPage() {
     ...item,
     description: item.description ?? '—',
     isPublic: item.isPublic ? (
-      <Badge variant="success" size="sm">Yes</Badge>
+      <Badge variant="success" size="sm">
+        Yes
+      </Badge>
     ) : (
-      <Badge variant="secondary" size="sm">No</Badge>
+      <Badge variant="secondary" size="sm">
+        No
+      </Badge>
     ),
     createdAt: new Date(item.createdAt).toLocaleDateString(),
     actions: (
