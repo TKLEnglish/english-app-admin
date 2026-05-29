@@ -271,7 +271,7 @@ export default function CollectionPage() {
         } catch {
           // no-op
         }
-        throw new Error(`${message}. Attempted endpoints: ${urls.join(', ')}`);
+        throw new Error(message);
       }
 
       setImportSuccess(
