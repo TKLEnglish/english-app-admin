@@ -10,13 +10,11 @@ import { Badge } from '@/components/badge/Badge';
 import { useAuth } from '@/hooks/useAuth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
-const COLLECTION_PUBLIC_ENDPOINTS = ['/public/collection', '/public/category'];
-const COLLECTION_PRIVATE_ENDPOINTS = ['/private/collection', '/private/category'];
+const COLLECTION_PUBLIC_ENDPOINTS = ['/public/collections'];
+const COLLECTION_PRIVATE_ENDPOINTS = ['/private/collections'];
 const IMPORT_ENDPOINT_TEMPLATES = [
-  '/private/collection/:id/import-words',
-  '/private/collection/:id/import',
-  '/private/category/:id/import-words',
-  '/private/category/:id/import',
+  '/private/collections/:id/import-words',
+  '/private/collections/:id/import',
 ];
 
 interface Collection {
