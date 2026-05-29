@@ -10,6 +10,14 @@ import { Badge } from '@/components/badge/Badge';
 import { useAuth } from '@/hooks/useAuth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
+const COLLECTION_PUBLIC_ENDPOINTS = ['/public/collection', '/public/category'];
+const COLLECTION_PRIVATE_ENDPOINTS = ['/private/collection', '/private/category'];
+const IMPORT_ENDPOINT_TEMPLATES = [
+  '/private/collection/:id/import-words',
+  '/private/collection/:id/import',
+  '/private/category/:id/import-words',
+  '/private/category/:id/import',
+];
 
 interface Collection {
   id: number;
@@ -37,6 +45,26 @@ function emptyForm() {
 
 function pluralize(count: number, singular: string, plural = `${singular}s`) {
   return count === 1 ? singular : plural;
+}
+
+async function fetchFirstAvailable(urls: string[], init?: RequestInit) {
+  let lastNotFound: Response | null = null;
+
+  for (const url of urls) {
+    const response = await fetch(url, init);
+    if (response.status === 404) {
+      lastNotFound = response;
+      continue;
+    }
+
+    return response;
+  }
+
+  if (lastNotFound) {
+    return lastNotFound;
+  }
+
+  throw new Error('Request failed');
 }
 
 export default function CollectionPage() {
@@ -71,7 +99,9 @@ export default function CollectionPage() {
         ...(search ? { search } : {}),
         ...(sort?.key ? { sortBy: sort.key, sortOrder: sort.direction ?? 'asc' } : {}),
       });
-      const res = await fetch(`${API_BASE}/public/collection?${params}`);
+      const res = await fetchFirstAvailable(
+        COLLECTION_PUBLIC_ENDPOINTS.map((endpoint) => `${API_BASE}${endpoint}?${params}`),
+      );
       if (!res.ok) throw new Error('Failed to fetch collections');
       const json = await res.json();
       const data = json.data?.items ?? [];
@@ -126,17 +156,19 @@ export default function CollectionPage() {
         description: form.description || undefined,
         isPublic: form.isPublic,
       };
-      const url = editItem
-        ? `${API_BASE}/private/collection/${editItem.id}`
-        : `${API_BASE}/private/collection`;
-      const res = await fetch(url, {
-        method: editItem ? 'PATCH' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const res = await fetchFirstAvailable(
+        COLLECTION_PRIVATE_ENDPOINTS.map((endpoint) =>
+          editItem ? `${API_BASE}${endpoint}/${editItem.id}` : `${API_BASE}${endpoint}`,
+        ),
+        {
+          method: editItem ? 'PATCH' : 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token.access}` } : {}),
+          },
+          body: JSON.stringify(payload),
         },
-        body: JSON.stringify(payload),
-      });
+      );
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data?.message ?? 'Save failed');
@@ -154,10 +186,13 @@ export default function CollectionPage() {
     if (!deleteTarget) return;
     setSaving(true);
     try {
-      await fetch(`${API_BASE}/private/collection/${deleteTarget.id}`, {
-        method: 'DELETE',
+      await fetchFirstAvailable(
+        COLLECTION_PRIVATE_ENDPOINTS.map((endpoint) => `${API_BASE}${endpoint}/${deleteTarget.id}`),
+        {
+          method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token.access}` } : {},
-      });
+        },
+      );
       setDeleteDialogOpen(false);
       fetchData();
     } finally {
@@ -196,25 +231,43 @@ export default function CollectionPage() {
         );
       }
 
-      const url = `${API_BASE}/private/collection/${editItem.id}/import-words`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token.access}` } : {}),
-        },
-        body: JSON.stringify({ words }),
-      });
+      const urls = IMPORT_ENDPOINT_TEMPLATES.map(
+        (template) => `${API_BASE}${template.replace(':id', String(editItem.id))}`,
+      );
 
-      if (!res.ok) {
-        let message = 'Import failed';
-        try {
-          const data = await res.json();
-          message = data?.message ?? message;
-        } catch {
-          // no-op
+      let imported = false;
+
+      for (const url of urls) {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token.access}` } : {}),
+          },
+          body: JSON.stringify({ words }),
+        });
+
+        if (res.status === 404) {
+          continue;
         }
-        throw new Error(message);
+
+        if (!res.ok) {
+          let message = 'Import failed';
+          try {
+            const data = await res.json();
+            message = data?.message ?? message;
+          } catch {
+            // no-op
+          }
+          throw new Error(message);
+        }
+
+        imported = true;
+        break;
+      }
+
+      if (!imported) {
+        throw new Error('Import endpoint not found');
       }
 
       setImportSuccess(
