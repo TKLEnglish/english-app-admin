@@ -10,8 +10,8 @@ import { Badge } from '@/components/badge/Badge';
 import { useAuth } from '@/hooks/useAuth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
-const COLLECTION_PUBLIC_ENDPOINTS = ['/public/collections'];
-const COLLECTION_PRIVATE_ENDPOINTS = ['/private/collections'];
+const COLLECTION_PUBLIC_ENDPOINT = '/public/collections';
+const COLLECTION_PRIVATE_ENDPOINT = '/private/collections';
 const IMPORT_ENDPOINT_TEMPLATES = [
   '/private/collections/:id/import-words',
   '/private/collections/:id/import',
@@ -105,9 +105,7 @@ export default function CollectionPage() {
         ...(search ? { search } : {}),
         ...(sort?.key ? { sortBy: sort.key, sortOrder: sort.direction ?? 'asc' } : {}),
       });
-      const res = await fetchFirstAvailable(
-        COLLECTION_PUBLIC_ENDPOINTS.map((endpoint) => `${API_BASE}${endpoint}?${params}`),
-      );
+      const res = await fetch(`${API_BASE}${COLLECTION_PUBLIC_ENDPOINT}?${params}`);
       if (!res.ok) throw new Error('Failed to fetch collections');
       const json = await res.json();
       const data = json.data?.items ?? [];
@@ -166,19 +164,17 @@ export default function CollectionPage() {
         description: form.description || undefined,
         isPublic: form.isPublic,
       };
-      const res = await fetchFirstAvailable(
-        COLLECTION_PRIVATE_ENDPOINTS.map((endpoint) =>
-          editItem ? `${API_BASE}${endpoint}/${editItem.id}` : `${API_BASE}${endpoint}`,
-        ),
-        {
-          method: editItem ? 'PATCH' : 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token.access}` } : {}),
-          },
-          body: JSON.stringify(payload),
+      const url = editItem
+        ? `${API_BASE}${COLLECTION_PRIVATE_ENDPOINT}/${editItem.id}`
+        : `${API_BASE}${COLLECTION_PRIVATE_ENDPOINT}`;
+      const res = await fetch(url, {
+        method: editItem ? 'PATCH' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token.access}` } : {}),
         },
-      );
+        body: JSON.stringify(payload),
+      });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data?.message ?? 'Save failed');
@@ -196,13 +192,10 @@ export default function CollectionPage() {
     if (!deleteTarget) return;
     setSaving(true);
     try {
-      await fetchFirstAvailable(
-        COLLECTION_PRIVATE_ENDPOINTS.map((endpoint) => `${API_BASE}${endpoint}/${deleteTarget.id}`),
-        {
-          method: 'DELETE',
-          headers: token ? { Authorization: `Bearer ${token.access}` } : {},
-        },
-      );
+      await fetch(`${API_BASE}${COLLECTION_PRIVATE_ENDPOINT}/${deleteTarget.id}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token.access}` } : {},
+      });
       setDeleteDialogOpen(false);
       fetchData();
     } finally {
