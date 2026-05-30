@@ -16,6 +16,7 @@ const IMPORT_ENDPOINT_TEMPLATES = [
   '/private/collections/:id/import-words',
   '/private/collections/:id/import',
 ];
+const IMPORT_COLLECTION_ENDPOINT = '/private/collections/import';
 
 interface Collection {
   id: number;
@@ -94,6 +95,13 @@ export default function CollectionPage() {
   const [importError, setImportError] = useState('');
   const [importSuccess, setImportSuccess] = useState('');
 
+  const [importCollectionDialogOpen, setImportCollectionDialogOpen] = useState(false);
+  const [importCollectionFile, setImportCollectionFile] = useState<File | null>(null);
+  const [importCollectionIsPublic, setImportCollectionIsPublic] = useState(false);
+  const [importingCollection, setImportingCollection] = useState(false);
+  const [importCollectionError, setImportCollectionError] = useState('');
+  const [importCollectionSuccess, setImportCollectionSuccess] = useState('');
+
   const limit = 10;
 
   const fetchData = useCallback(async () => {
@@ -121,6 +129,57 @@ export default function CollectionPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  function openImportCollection() {
+    setImportCollectionFile(null);
+    setImportCollectionIsPublic(false);
+    setImportCollectionError('');
+    setImportCollectionSuccess('');
+    setImportCollectionDialogOpen(true);
+  }
+
+  async function handleImportCollection() {
+    if (!importCollectionFile) {
+      setImportCollectionError('Please choose a .txt file to import.');
+      return;
+    }
+    setImportingCollection(true);
+    setImportCollectionError('');
+    setImportCollectionSuccess('');
+    try {
+      const formData = new FormData();
+      formData.append('file', importCollectionFile);
+      const url = `${API_BASE}${IMPORT_COLLECTION_ENDPOINT}${importCollectionIsPublic ? '?isPublic=true' : ''}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token.access}` } : {},
+        body: formData,
+      });
+      if (!res.ok) {
+        let message = 'Import failed';
+        try {
+          const data = await res.json();
+          message = data?.message ?? message;
+        } catch {
+          // no-op
+        }
+        throw new Error(message);
+      }
+      const result = await res.json();
+      const created = result?.data?.created ?? result?.created;
+      setImportCollectionSuccess(
+        created
+          ? `Imported ${created} ${pluralize(created, 'collection')} successfully.`
+          : 'Collections imported successfully.',
+      );
+      setImportCollectionFile(null);
+      fetchData();
+    } catch (e) {
+      setImportCollectionError(e instanceof Error ? e.message : 'Import failed');
+    } finally {
+      setImportingCollection(false);
+    }
+  }
 
   function openCreate() {
     setEditItem(null);
@@ -324,6 +383,9 @@ export default function CollectionPage() {
               }}
             />
           </div>
+          <Button variant="secondary" onClick={openImportCollection}>
+            Import Collection
+          </Button>
           <Button variant="primary" onClick={openCreate}>
             + New Collection
           </Button>
@@ -419,6 +481,59 @@ export default function CollectionPage() {
               </div>
             </div>
           )}
+        </div>
+      </Dialog>
+
+      {/* Import Collection Dialog */}
+      <Dialog
+        open={importCollectionDialogOpen}
+        title="Import Collection"
+        size="md"
+        onClose={() => {
+          setImportCollectionDialogOpen(false);
+          setImportCollectionError('');
+          setImportCollectionSuccess('');
+          setImportCollectionFile(null);
+        }}
+        footer={
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+            <Button
+              variant="ghost"
+              onClick={() => setImportCollectionDialogOpen(false)}
+              disabled={importingCollection}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleImportCollection}
+              loading={importingCollection}
+            >
+              Import
+            </Button>
+          </div>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {importCollectionError && <div className="validate-message">{importCollectionError}</div>}
+          {importCollectionSuccess && (
+            <div className="field-hint" style={{ color: 'var(--success, #16a34a)' }}>
+              {importCollectionSuccess}
+            </div>
+          )}
+          <FileChooserField
+            label="Collection file (.txt)"
+            accept=".txt,text/plain"
+            value={importCollectionFile}
+            hint="Format: # Collection Name, ## Sub-Collection, words on separate lines."
+            onChange={setImportCollectionFile}
+          />
+          <CheckboxField
+            label="Public"
+            hint="When checked, the imported collections will be visible to all users."
+            checked={importCollectionIsPublic}
+            onChange={setImportCollectionIsPublic}
+          />
         </div>
       </Dialog>
 
