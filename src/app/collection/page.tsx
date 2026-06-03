@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
 const COLLECTION_PRIVATE_ENDPOINT = '/private/collections';
+const COLLECTION_PUBLIC_ENDPOINT = '/public/collections';
 const IMPORT_ENDPOINT_TEMPLATES = [
   '/private/collections/:id/import-words',
   '/private/collections/:id/import',
@@ -112,7 +113,7 @@ export default function CollectionPage() {
         ...(search ? { search } : {}),
         ...(sort?.key ? { sortBy: sort.key, sortOrder: sort.direction ?? 'asc' } : {}),
       });
-      const res = await fetch(`${API_BASE}${COLLECTION_PRIVATE_ENDPOINT}?${params}`);
+      const res = await fetch(`${API_BASE}${COLLECTION_PUBLIC_ENDPOINT}?${params}`);
       if (!res.ok) throw new Error('Failed to fetch collections');
       const json = await res.json();
       const data = json.data?.items ?? [];
