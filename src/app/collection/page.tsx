@@ -12,12 +12,27 @@ import { authenticatedFetchWithRefresh } from '@/utils/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
 const COLLECTION_PRIVATE_ENDPOINT = '/private/collections';
-const COLLECTION_PUBLIC_ENDPOINT = '/public/collections';
 const IMPORT_ENDPOINT_TEMPLATES = [
   '/private/collections/:id/import-words',
   '/private/collections/:id/import',
 ];
 const IMPORT_COLLECTION_ENDPOINT = '/private/collections/import';
+const COLLECTION_VOCAB_ENDPOINT_TEMPLATES = [
+  '/private/collections/:id/vocabulary',
+  '/private/collections/:id/words',
+  '/public/collections/:id/vocabulary',
+  '/public/collections/:id/words',
+];
+const ADD_COLLECTION_VOCAB_ENDPOINT_TEMPLATES = [
+  '/private/collections/:id/vocabulary',
+  '/private/collections/:id/words',
+  '/private/collections/:id/import-words',
+  '/private/collections/:id/import',
+];
+const REMOVE_COLLECTION_VOCAB_ENDPOINT_TEMPLATES = [
+  '/private/collections/:id/vocabulary/:vocabularyId',
+  '/private/collections/:id/words/:vocabularyId',
+];
 
 interface Collection {
   id: number;
@@ -27,13 +42,30 @@ interface Collection {
   createdAt: string;
 }
 
+interface CollectionVocabulary {
+  id: number;
+  word: string;
+  level?: string;
+  meaning?: string;
+  createdAt?: string;
+  meanings?: { meaning: string }[];
+}
+
 const COLUMNS: TableColumn[] = [
   { key: 'id', label: 'ID', sortable: true, width: '60px' },
   { key: 'name', label: 'Name', sortable: true, filterable: true },
   { key: 'description', label: 'Description', filterable: true },
   { key: 'isPublic', label: 'Visibility', width: '80px' },
   { key: 'createdAt', label: 'Created', sortable: true, width: '140px' },
-  { key: 'actions', label: '', width: '120px' },
+  { key: 'actions', label: '', width: '190px' },
+];
+
+const VOCAB_COLUMNS: TableColumn[] = [
+  { key: 'id', label: 'ID', sortable: true, width: '60px' },
+  { key: 'word', label: 'Word', sortable: true, filterable: true },
+  { key: 'level', label: 'Level', width: '120px' },
+  { key: 'meaning', label: 'Meaning', filterable: true },
+  { key: 'actions', label: '', width: '100px' },
 ];
 
 const WORD_IMPORT_PATTERN = /^[\p{L}][\p{L}\p{N}' -]*$/u;
@@ -45,6 +77,12 @@ function emptyForm() {
 
 function pluralize(count: number, singular: string, plural = `${singular}s`) {
   return count === 1 ? singular : plural;
+}
+
+function collectionEndpoint(template: string, collectionId: number, vocabularyId?: number) {
+  return `${API_BASE}${template
+    .replace(':id', String(collectionId))
+    .replace(':vocabularyId', String(vocabularyId ?? ''))}`;
 }
 
 async function fetchFirstAvailable(urls: string[], init?: RequestInit) {
@@ -103,7 +141,19 @@ export default function CollectionPage() {
   const [importCollectionError, setImportCollectionError] = useState('');
   const [importCollectionSuccess, setImportCollectionSuccess] = useState('');
 
+  const [vocabDialogOpen, setVocabDialogOpen] = useState(false);
+  const [vocabCollection, setVocabCollection] = useState<Collection | null>(null);
+  const [vocabItems, setVocabItems] = useState<CollectionVocabulary[]>([]);
+  const [vocabTotal, setVocabTotal] = useState(0);
+  const [vocabPage, setVocabPage] = useState(1);
+  const [vocabSearch, setVocabSearch] = useState('');
+  const [vocabLoading, setVocabLoading] = useState(false);
+  const [vocabError, setVocabError] = useState('');
+  const [addVocabInput, setAddVocabInput] = useState('');
+  const [vocabSaving, setVocabSaving] = useState(false);
+
   const limit = 10;
+  const vocabLimit = 10;
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -132,6 +182,53 @@ export default function CollectionPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const fetchCollectionVocab = useCallback(async () => {
+    if (!vocabCollection) return;
+
+    setVocabLoading(true);
+    setVocabError('');
+    try {
+      const params = new URLSearchParams({
+        page: String(vocabPage),
+        limit: String(vocabLimit),
+        ...(vocabSearch ? { search: vocabSearch } : {}),
+      });
+      const urls = COLLECTION_VOCAB_ENDPOINT_TEMPLATES.map(
+        (template) => `${collectionEndpoint(template, vocabCollection.id)}?${params}`,
+      );
+      const res = await fetchFirstAvailable(urls);
+      if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error(`Collection vocabulary endpoint not found. Attempted: ${urls.join(', ')}`);
+        }
+
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message ?? 'Failed to fetch collection vocabulary');
+      }
+
+      const json = await res.json();
+      const responseData = json.data ?? json;
+      const data =
+        responseData.items ?? responseData.vocabulary ?? responseData.words ?? responseData;
+      const pagination = responseData.pagination;
+      const items = Array.isArray(data) ? data : [];
+      setVocabItems(items);
+      setVocabTotal(pagination?.total ?? responseData.total ?? items.length);
+    } catch (e) {
+      setVocabItems([]);
+      setVocabTotal(0);
+      setVocabError(e instanceof Error ? e.message : 'Failed to fetch collection vocabulary');
+    } finally {
+      setVocabLoading(false);
+    }
+  }, [vocabCollection, vocabPage, vocabSearch]);
+
+  useEffect(() => {
+    if (vocabDialogOpen) {
+      fetchCollectionVocab();
+    }
+  }, [fetchCollectionVocab, vocabDialogOpen]);
 
   function openImportCollection() {
     setImportCollectionFile(null);
@@ -210,6 +307,17 @@ export default function CollectionPage() {
   function openDelete(item: Collection) {
     setDeleteTarget(item);
     setDeleteDialogOpen(true);
+  }
+
+  function openVocabDetail(item: Collection) {
+    setVocabCollection(item);
+    setVocabItems([]);
+    setVocabTotal(0);
+    setVocabPage(1);
+    setVocabSearch('');
+    setVocabError('');
+    setAddVocabInput('');
+    setVocabDialogOpen(true);
   }
 
   async function handleSave() {
@@ -338,6 +446,82 @@ export default function CollectionPage() {
     }
   }
 
+  async function handleAddVocab() {
+    if (!vocabCollection) return;
+    const value = addVocabInput.trim();
+    if (!value) {
+      setVocabError('Enter a vocabulary word or ID to add.');
+      return;
+    }
+
+    setVocabSaving(true);
+    setVocabError('');
+    try {
+      const numericId = Number(value);
+      const payload =
+        Number.isInteger(numericId) && numericId > 0
+          ? { vocabularyId: numericId, wordId: numericId, words: [value] }
+          : { word: value, words: [value] };
+      const urls = ADD_COLLECTION_VOCAB_ENDPOINT_TEMPLATES.map((template) =>
+        collectionEndpoint(template, vocabCollection.id),
+      );
+      const res = await fetchFirstAvailable(urls, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error(`Add vocabulary endpoint not found. Attempted: ${urls.join(', ')}`);
+        }
+
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message ?? 'Failed to add vocabulary');
+      }
+
+      setAddVocabInput('');
+      setVocabPage(1);
+      fetchCollectionVocab();
+    } catch (e) {
+      setVocabError(e instanceof Error ? e.message : 'Failed to add vocabulary');
+    } finally {
+      setVocabSaving(false);
+    }
+  }
+
+  async function handleRemoveVocab(item: CollectionVocabulary) {
+    if (!vocabCollection) return;
+
+    setVocabSaving(true);
+    setVocabError('');
+    try {
+      const urls = REMOVE_COLLECTION_VOCAB_ENDPOINT_TEMPLATES.map((template) =>
+        collectionEndpoint(template, vocabCollection.id, item.id),
+      );
+      const res = await fetchFirstAvailable(urls, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error(`Remove vocabulary endpoint not found. Attempted: ${urls.join(', ')}`);
+        }
+
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message ?? 'Failed to remove vocabulary');
+      }
+
+      fetchCollectionVocab();
+    } catch (e) {
+      setVocabError(e instanceof Error ? e.message : 'Failed to remove vocabulary');
+    } finally {
+      setVocabSaving(false);
+    }
+  }
+
   const tableData = items.map((item) => ({
     ...item,
     description: item.description ?? '—',
@@ -353,6 +537,9 @@ export default function CollectionPage() {
     createdAt: new Date(item.createdAt).toLocaleDateString(),
     actions: (
       <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <Button size="sm" variant="secondary" onClick={() => openVocabDetail(item)}>
+          Vocab
+        </Button>
         <Button size="sm" variant="ghost" onClick={() => openEdit(item)}>
           Edit
         </Button>
@@ -364,6 +551,22 @@ export default function CollectionPage() {
   }));
 
   const totalPages = Math.ceil(total / limit);
+  const vocabTotalPages = Math.ceil(vocabTotal / vocabLimit);
+  const vocabTableData = vocabItems.map((item) => ({
+    ...item,
+    level: item.level ?? '—',
+    meaning: item.meaning ?? item.meanings?.[0]?.meaning ?? '—',
+    actions: (
+      <Button
+        size="sm"
+        variant="danger"
+        disabled={vocabSaving}
+        onClick={() => handleRemoveVocab(item)}
+      >
+        Remove
+      </Button>
+    ),
+  }));
 
   return (
     <div className="page">
@@ -483,6 +686,66 @@ export default function CollectionPage() {
               </div>
             </div>
           )}
+        </div>
+      </Dialog>
+
+      {/* Collection Vocabulary Dialog */}
+      <Dialog
+        open={vocabDialogOpen}
+        title={vocabCollection ? `${vocabCollection.name} Vocabulary` : 'Collection Vocabulary'}
+        size="lg"
+        onClose={() => setVocabDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+            <Button variant="ghost" onClick={() => setVocabDialogOpen(false)}>
+              Close
+            </Button>
+          </div>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {vocabError && <div className="validate-message">{vocabError}</div>}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1fr) auto',
+              gap: '0.75rem',
+              alignItems: 'flex-end',
+            }}
+          >
+            <TextField
+              key={`add-vocab-${vocabCollection?.id ?? 'none'}-${
+                addVocabInput ? 'filled' : 'empty'
+              }`}
+              label="Add vocabulary"
+              placeholder="Word or vocabulary ID"
+              value={addVocabInput}
+              onChange={setAddVocabInput}
+            />
+            <Button variant="primary" onClick={handleAddVocab} loading={vocabSaving}>
+              Add
+            </Button>
+          </div>
+          <TextField
+            key={`search-vocab-${vocabCollection?.id ?? 'none'}`}
+            label="Search vocabulary"
+            placeholder="Search by word…"
+            value={vocabSearch}
+            onChange={(v) => {
+              setVocabSearch(v);
+              setVocabPage(1);
+            }}
+          />
+          <DataTable
+            columns={VOCAB_COLUMNS}
+            data={vocabTableData}
+            loading={vocabLoading}
+            emptyMessage="No vocabulary in this collection."
+            page={vocabPage}
+            totalPages={vocabTotalPages}
+            totalItems={vocabTotal}
+            onPageChange={setVocabPage}
+          />
         </div>
       </Dialog>
 
