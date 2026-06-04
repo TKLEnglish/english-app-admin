@@ -1,10 +1,13 @@
 'use client';
-import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
-
-interface AuthToken {
-  access: string;
-  refresh: string;
-}
+import { createContext, useContext, useState, useEffect, type ReactNode, useRef } from 'react';
+import type { AuthToken } from '@/utils/api';
+import {
+  clearStoredAuthToken,
+  getStoredAuthToken,
+  refreshAccessToken as refreshStoredAccessToken,
+  setStoredAuthToken,
+  subscribeToAuthTokenChange,
+} from '@/utils/api';
 
 interface AuthContextType {
   token: AuthToken | null;
@@ -25,19 +28,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load token from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem('auth_token');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setToken(parsed);
-        scheduleRefresh(parsed);
-      } catch {
-        localStorage.removeItem('auth_token');
-      }
-    }
+    const syncToken = () => {
+      const storedToken = getStoredAuthToken();
+      setToken(storedToken);
+      if (storedToken) scheduleRefresh(storedToken);
+    };
+
+    syncToken();
     setIsLoading(false);
+    return subscribeToAuthTokenChange(syncToken);
   }, []);
 
   function scheduleRefresh(tok: AuthToken) {
@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const parts = tok.access.split('.');
       if (parts.length !== 3) return;
 
-      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
       const expiresAt = payload.exp ? payload.exp * 1000 : null;
 
       if (!expiresAt) return;
@@ -70,30 +70,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function refreshAccessToken(refreshTokenValue: string) {
     try {
-      const res = await fetch(`${API_BASE}/common/auth/refresh`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${refreshTokenValue}`,
-        },
-        body: JSON.stringify({}),
-      });
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          logout();
-          return;
-        }
-        throw new Error('Token refresh failed');
-      }
-
-      const data = await res.json();
-      const newTokens: AuthToken = {
-        access: data.data?.accessToken || data.accessToken,
-        refresh: data.data?.refreshToken || refreshTokenValue,
-      };
+      const newTokens = await refreshStoredAccessToken(refreshTokenValue);
+      if (!newTokens) throw new Error('Token refresh failed');
       setToken(newTokens);
-      localStorage.setItem('auth_token', JSON.stringify(newTokens));
       scheduleRefresh(newTokens);
     } catch (e) {
       console.error('Token refresh error:', e);
@@ -120,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         refresh: data.data?.refreshToken || data.refreshToken,
       };
       setToken(tokens);
-      localStorage.setItem('auth_token', JSON.stringify(tokens));
+      setStoredAuthToken(tokens);
       scheduleRefresh(tokens);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Login failed';
@@ -139,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function logout() {
     if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
     setToken(null);
-    localStorage.removeItem('auth_token');
+    clearStoredAuthToken();
   }
 
   return (

@@ -6,6 +6,7 @@ import { Dialog } from '@/components/dialog/Dialog';
 import { TextField } from '@/components/text-field/TextField';
 import { Badge } from '@/components/badge/Badge';
 import { useAuth } from '@/hooks/useAuth';
+import { authenticatedFetchWithRefresh } from '@/utils/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
 
@@ -63,7 +64,7 @@ export default function CategoryPage() {
         ...(search ? { search } : {}),
         ...(sort?.key ? { sortBy: sort.key, sortOrder: sort.direction ?? 'asc' } : {}),
       });
-      const res = await fetch(`${API_BASE}/public/category?${params}`);
+      const res = await authenticatedFetchWithRefresh(`${API_BASE}/public/category?${params}`);
       if (!res.ok) throw new Error('Failed to fetch categories');
       const json = await res.json();
       const data = json.data?.items ?? [];
@@ -74,7 +75,7 @@ export default function CategoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, sort]);
+  }, [page, search, sort, token]);
 
   useEffect(() => {
     fetchData();
@@ -114,11 +115,10 @@ export default function CategoryPage() {
       const url = editItem
         ? `${API_BASE}/private/category/${editItem.id}`
         : `${API_BASE}/private/category`;
-      const res = await fetch(url, {
+      const res = await authenticatedFetchWithRefresh(url, {
         method: editItem ? 'PATCH' : 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token.access}` } : {}),
         },
         body: JSON.stringify(payload),
       });
@@ -139,9 +139,8 @@ export default function CategoryPage() {
     if (!deleteTarget) return;
     setSaving(true);
     try {
-      await fetch(`${API_BASE}/private/category/${deleteTarget.id}`, {
+      await authenticatedFetchWithRefresh(`${API_BASE}/private/category/${deleteTarget.id}`, {
         method: 'DELETE',
-        headers: token ? { Authorization: `Bearer ${token.access}` } : {},
       });
       setDeleteDialogOpen(false);
       fetchData();

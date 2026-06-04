@@ -8,6 +8,7 @@ import { CheckboxField } from '@/components/checkbox-field/CheckboxField';
 import { FileChooserField } from '@/components/file-chooser-field/FileChooserField';
 import { Badge } from '@/components/badge/Badge';
 import { useAuth } from '@/hooks/useAuth';
+import { authenticatedFetchWithRefresh } from '@/utils/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
 const COLLECTION_PRIVATE_ENDPOINT = '/private/collections';
@@ -52,7 +53,7 @@ async function fetchFirstAvailable(urls: string[], init?: RequestInit) {
 
   for (const url of urls) {
     try {
-      const response = await fetch(url, init);
+      const response = await authenticatedFetchWithRefresh(url, init);
       if (response.status === 404) {
         lastNotFound = response;
         continue;
@@ -113,7 +114,9 @@ export default function CollectionPage() {
         ...(search ? { search } : {}),
         ...(sort?.key ? { sortBy: sort.key, sortOrder: sort.direction ?? 'asc' } : {}),
       });
-      const res = await fetch(`${API_BASE}${COLLECTION_PUBLIC_ENDPOINT}?${params}`);
+      const res = await authenticatedFetchWithRefresh(
+        `${API_BASE}${COLLECTION_PRIVATE_ENDPOINT}?${params}`,
+      );
       if (!res.ok) throw new Error('Failed to fetch collections');
       const json = await res.json();
       const data = json.data?.items ?? [];
@@ -124,7 +127,7 @@ export default function CollectionPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, sort]);
+  }, [page, search, sort, token]);
 
   useEffect(() => {
     fetchData();
@@ -150,9 +153,8 @@ export default function CollectionPage() {
       const formData = new FormData();
       formData.append('file', importCollectionFile);
       const url = `${API_BASE}${IMPORT_COLLECTION_ENDPOINT}${importCollectionIsPublic ? '?isPublic=true' : ''}`;
-      const res = await fetch(url, {
+      const res = await authenticatedFetchWithRefresh(url, {
         method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token.access}` } : {},
         body: formData,
       });
       if (!res.ok) {
@@ -226,11 +228,10 @@ export default function CollectionPage() {
       const url = editItem
         ? `${API_BASE}${COLLECTION_PRIVATE_ENDPOINT}/${editItem.id}`
         : `${API_BASE}${COLLECTION_PRIVATE_ENDPOINT}`;
-      const res = await fetch(url, {
+      const res = await authenticatedFetchWithRefresh(url, {
         method: editItem ? 'PATCH' : 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token.access}` } : {}),
         },
         body: JSON.stringify(payload),
       });
@@ -251,10 +252,12 @@ export default function CollectionPage() {
     if (!deleteTarget) return;
     setSaving(true);
     try {
-      await fetch(`${API_BASE}${COLLECTION_PRIVATE_ENDPOINT}/${deleteTarget.id}`, {
-        method: 'DELETE',
-        headers: token ? { Authorization: `Bearer ${token.access}` } : {},
-      });
+      await authenticatedFetchWithRefresh(
+        `${API_BASE}${COLLECTION_PRIVATE_ENDPOINT}/${deleteTarget.id}`,
+        {
+          method: 'DELETE',
+        },
+      );
       setDeleteDialogOpen(false);
       fetchData();
     } finally {
@@ -304,7 +307,6 @@ export default function CollectionPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token.access}` } : {}),
         },
         body: JSON.stringify({ words }),
       });

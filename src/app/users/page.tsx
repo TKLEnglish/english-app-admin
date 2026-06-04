@@ -6,6 +6,7 @@ import { Dialog } from '@/components/dialog/Dialog';
 import { TextField } from '@/components/text-field/TextField';
 import { Badge } from '@/components/badge/Badge';
 import { useAuth } from '@/hooks/useAuth';
+import { authenticatedFetchWithRefresh } from '@/utils/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
 
@@ -82,7 +83,7 @@ export default function UsersPage() {
         ...(search ? { search } : {}),
         ...(sort?.key ? { sortBy: sort.key, sortOrder: sort.direction ?? 'asc' } : {}),
       });
-      const res = await fetch(`${API_BASE}/private/users?${params}`);
+      const res = await authenticatedFetchWithRefresh(`${API_BASE}/private/users?${params}`);
       if (!res.ok) throw new Error('Failed to fetch users');
       const json = await res.json();
       const data = json.data?.items ?? [];
@@ -93,7 +94,7 @@ export default function UsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, sort]);
+  }, [page, search, sort, token]);
 
   useEffect(() => {
     fetchData();
@@ -120,11 +121,10 @@ export default function UsersPage() {
         level: form.level || undefined,
         isActive: form.isActive === 'true',
       };
-      const res = await fetch(`${API_BASE}/private/users/${editItem.id}`, {
+      const res = await authenticatedFetchWithRefresh(`${API_BASE}/private/users/${editItem.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token.access}` } : {}),
         },
         body: JSON.stringify(payload),
       });
@@ -145,9 +145,8 @@ export default function UsersPage() {
     if (!deleteTarget) return;
     setSaving(true);
     try {
-      await fetch(`${API_BASE}/private/users/${deleteTarget.id}`, {
+      await authenticatedFetchWithRefresh(`${API_BASE}/private/users/${deleteTarget.id}`, {
         method: 'DELETE',
-        headers: token ? { Authorization: `Bearer ${token.access}` } : {},
       });
       setDeleteDialogOpen(false);
       fetchData();
